@@ -4,26 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fentanyl Chess Online</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <div class="game-container">
+        
         <div class="status-box">
-            <div id="status">Инициализация...</div>
+            <div id="status">Загрузка...</div>
         </div>
-<div class="controls">
-    <div id="player-color-info">Вы играете за: <span id="user-color">ожидание...</span></div>
-    <button id="undo-btn" class="btn">Отменить ход</button>
-</div>
+
+        <div id="game-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2 id="modal-title">Ожидание...</h2>
+                <p id="modal-desc">Отправь ссылку другу, чтобы он присоединился.</p>
+                <button id="modal-btn" class="btn hidden">Ок</button>
+            </div>
+        </div>
+
         <div id="myBoard"></div>
 
+        <div class="controls">
+            <div id="player-color-info">Вы: <strong id="user-color">...</strong></div>
+            
+            <div class="buttons-group">
+                <button id="undo-btn" class="btn">Отменить ход</button>
+                <button id="resign-btn" class="btn btn-danger hidden">Сдаться</button>
+                <button id="rematch-btn" class="btn btn-success hidden">Реванш</button>
+            </div>
+        </div>
+
         <div class="info-panel">
-            <p>ID комнаты: <strong id="room-id">...</strong></p>
-            <small>Поделись ссылкой для игры:</small>
+            <small>Ссылка на комнату (нажми, чтобы скопировать):</small>
             <input type="text" id="room-link" readonly>
         </div>
+        
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
