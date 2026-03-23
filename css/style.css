@@ -253,3 +253,36 @@ body {
     .confirm-overlay { gap: 10px; }
     .side-panel { max-width: 100%; }
 }
+.game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+.game-item.active {
+    background: #252525;
+    border-left: 4px solid var(--accent);
+}
+
+.game-item.finished {
+    background: #1a1a1a;
+    border-left: 4px solid #555;
+    opacity: 0.7;
+}
+
+.game-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    gap: 4px;
+}
+
+.room-id { font-size: 0.7rem; color: #777; }
+.opponent { font-size: 1rem; color: #fff; }
+.game-status { font-size: 0.8rem; color: var(--accent); }
+
+.finished .game-status { color: var(--danger); }
