@@ -8,9 +8,8 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
-    <div class="game-container">
-        <div class="auth-panel">
+    <div class="main-container">
+        <div class="top-bar">
             <div id="user-info" class="hidden">
                 <img id="user-photo" src="" alt="avatar">
                 <span id="user-name"></span>
@@ -19,32 +18,54 @@
             <button id="login-btn" class="btn btn-success">Войти через Google</button>
         </div>
 
-        <div class="status-box">
-            <div id="status">Загрузка...</div>
+        <div id="lobby-section" class="card">
+            <h1>Мои партии</h1>
+            <div id="games-list" class="games-grid">Загрузка...</div>
+            <button id="create-game-btn" class="btn btn-success btn-large">Создать новую игру</button>
         </div>
 
-        <div id="game-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2 id="modal-title">Ожидание...</h2>
-                <p id="modal-desc">Отправь ссылку другу, чтобы он присоединился.</p>
-                <button id="modal-btn" class="btn hidden">Ок</button>
+        <div id="game-section" class="hidden">
+            <div class="game-layout">
+                <div class="board-area">
+                    <div class="status-box"><div id="status">Ожидание...</div></div>
+                    
+                    <div id="myBoard">
+                        <div id="confirm-move-box" class="confirm-overlay hidden">
+                            <button id="confirm-btn" class="btn-round btn-success">✓</button>
+                            <button id="cancel-btn" class="btn-round btn-danger">✕</button>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <span>Вы: <strong id="user-color">...</strong></span>
+                        <div class="buttons-group">
+                            <button id="undo-btn" class="btn">Отмена</button>
+                            <button id="resign-btn" class="btn btn-danger">Сдаться</button>
+                            <button id="exit-btn" class="btn">В лобби</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="side-panel">
+                    <h3>История ходов</h3>
+                    <div id="move-list"></div>
+                    <div class="share-box">
+                        <small>Ссылка для друга:</small>
+                        <input type="text" id="room-link" readonly>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div id="myBoard"></div>
-
-        <div class="controls">
-            <div id="player-color-info">Вы: <strong id="user-color">...</strong></div>
-            <div class="buttons-group">
-                <button id="undo-btn" class="btn">Отмена</button>
-                <button id="resign-btn" class="btn btn-danger hidden">Сдаться</button>
-                <button id="rematch-btn" class="btn btn-success hidden">Реванш</button>
+            <div id="game-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h2 id="modal-title">Мат!</h2>
+                    <p id="modal-desc"></p>
+                    <div class="modal-buttons">
+                        <button id="modal-rematch-btn" class="btn btn-success">Реванш (смена сторон)</button>
+                        <button id="modal-exit-btn" class="btn">В лобби</button>
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="info-panel">
-            <small>Ссылка на комнату:</small>
-            <input type="text" id="room-link" readonly>
         </div>
     </div>
 
