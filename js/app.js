@@ -33,7 +33,7 @@ function setupAuth() {
         }
     });
 
-    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err => console.error("Auth Error:", err));
     logoutBtn.onclick = () => signOut(auth).then(() => {
         window.location.href = window.location.origin + window.location.pathname;
     });
@@ -73,7 +73,6 @@ async function initGame(roomId) {
     document.getElementById('game-section').classList.remove('hidden');
     document.getElementById('room-link').value = window.location.href;
 
-    // Ждем авторизации, если она в процессе
     const user = await new Promise(resolve => {
         const unsubscribe = onAuthStateChanged(auth, u => {
             unsubscribe();
@@ -81,7 +80,6 @@ async function initGame(roomId) {
         });
     });
 
-    // Определяем роль в комнате
     const uid = user ? user.uid : 'anon';
     const playersRef = ref(db, `games/${roomId}/players`);
     
@@ -97,7 +95,6 @@ async function initGame(roomId) {
     if (p.white === uid) playerColor = 'w';
     else if (p.black === uid) playerColor = 'b';
 
-    // Рисуем доску
     board = Chessboard('myBoard', {
         draggable: true,
         position: 'start',
@@ -109,7 +106,6 @@ async function initGame(roomId) {
     if (playerColor === 'b') board.orientation('black');
     document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : (playerColor === 'b' ? 'Черные' : 'Зритель');
 
-    // Синхронизация
     const gameRef = ref(db, `games/${roomId}`);
     onValue(gameRef, (snap) => {
         const data = snap.val();
@@ -142,4 +138,60 @@ function onDrop(source, target) {
 function setupGameControls(gameRef, roomId) {
     document.getElementById('confirm-btn').onclick = () => {
         const updateData = { 
-            pgn: game.pgn(), fen: game.fen
+            pgn: game.pgn(), 
+            fen: game.fen(), 
+            turn: game.turn(), 
+            lastMoveBy: auth.currentUser?.uid 
+        };
+        if (game.game_over()) {
+            updateData.gameState = 'game_over';
+            updateData.message = game.in_checkmate() ? 'Мат!' : 'Ничья!';
+        }
+        update(gameRef, updateData);
+        pendingMove = null;
+        document.getElementById('confirm-move-box').classList.add('hidden');
+    };
+
+    document.getElementById('cancel-btn').onclick = () => {
+        game.undo(); board.position(game.fen());
+        pendingMove = null;
+        document.getElementById('confirm-move-box').classList.add('hidden');
+    };
+
+    document.getElementById('modal-rematch-btn').onclick = async () => {
+        const snap = await get(ref(db, `games/${roomId}/players`));
+        const p = snap.val();
+        await set(ref(db, `games/${roomId}/players`), { white: p.black || 'anon', black: p.white || 'anon' });
+        await update(gameRef, { pgn: '', fen: 'start', turn: 'w', gameState: 'playing' });
+        location.reload();
+    };
+
+    document.getElementById('exit-btn').onclick = () => {
+        window.location.href = window.location.origin + window.location.pathname;
+    };
+    
+    document.getElementById('room-link').onclick = function() {
+        this.select(); document.execCommand('copy');
+        alert('Ссылка скопирована!');
+    };
+}
+
+function updateUI(data) {
+    const status = document.getElementById('status');
+    if (status) status.innerText = `Ход: ${game.turn() === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
+    
+    const moveList = document.getElementById('move-list');
+    if (moveList) {
+        moveList.innerHTML = game.history().map((m, i) => 
+            (i % 2 === 0 ? `<span class="move-num">${Math.floor(i/2)+1}.</span>` : '') + `<span class="move-item">${m}</span>`
+        ).join(' ');
+        moveList.scrollTop = moveList.scrollHeight;
+    }
+
+    if (data.gameState === 'game_over') {
+        document.getElementById('game-modal').classList.remove('hidden');
+        document.getElementById('modal-desc').innerText = data.message;
+    } else {
+        document.getElementById('game-modal').classList.add('hidden');
+    }
+}
