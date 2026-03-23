@@ -15,4 +15,4 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-export const auth = getAuth(app); // Экспортируем auth для быстрого доступа
+export const auth = getAuth(app);
