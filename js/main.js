@@ -64,3 +64,17 @@ function drawBoard() {
             const isLight = (i + j) % 2 === 0;
             ctx.fillStyle = isLight ? '#e8e8e8' : '#2c2c2c';
             ctx.fillRect(j * cellSize,
+                         // Добавьте в конец файла main.js для проверки
+setTimeout(() => {
+    if (FirebaseAPI && FirebaseAPI.isConnected()) {
+        console.log('✅ Firebase работает!');
+        const db = FirebaseAPI.getDatabase();
+        if (db) {
+            // Тестовая запись
+            db.ref('test').set({ message: 'Hello from chess game!' });
+            console.log('📝 Тестовая запись создана');
+        }
+    } else {
+        console.warn('⚠️ Firebase не подключен');
+    }
+}, 2000);
