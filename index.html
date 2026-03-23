@@ -37,6 +37,13 @@
                     </div>
                     
                     <div id="myBoard" style="width: 100%"></div>
+                    <div id="takeback-request-box" class="confirm-overlay hidden">
+    <div class="request-text">Соперник просит отменить ход?</div>
+    <div class="request-buttons">
+        <button id="takeback-accept" class="btn-round btn-success">✓</button>
+        <button id="takeback-reject" class="btn-round btn-danger">✕</button>
+    </div>
+</div>
 
                     <div id="confirm-move-box" class="confirm-overlay hidden">
                         <button id="confirm-btn" class="btn-round btn-success">✓</button>
@@ -45,6 +52,7 @@
 
                     <div class="controls">
                         <button id="resign-btn" class="btn btn-danger">Сдаться</button>
+                        <button id="takeback-btn" class="btn btn-outline">Просить отмену</button>
                         <button id="exit-btn" class="btn">В лобби</button>
                     </div>
                 </div>
