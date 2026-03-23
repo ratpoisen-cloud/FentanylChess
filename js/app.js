@@ -1,6 +1,8 @@
 import { db } from './firebase-config.js';
 import { ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+console.log("Скрипт app.js запущен!"); // Проверка старта
+
 // 1. Инициализация комнаты
 const urlParams = new URLSearchParams(window.location.search);
 let roomId = urlParams.get('room');
@@ -9,6 +11,7 @@ if (!roomId) {
     window.history.pushState({}, '', `?room=${roomId}`);
 }
 
+// Теперь эти строки ДОЛЖНЫ сработать, если скрипт жив
 document.getElementById('room-id').innerText = roomId;
 document.getElementById('room-link').value = window.location.href;
 
@@ -16,7 +19,9 @@ const gameRef = ref(db, 'games/' + roomId);
 
 // 2. Инициализация игры
 let board = null;
-let game = new Chess();
+// Используем window.Chess для надежности
+const ChessInstance = window.Chess || Chess; 
+let game = new ChessInstance();
 const statusEl = document.getElementById('status');
 
 function onDrop(source, target) {
@@ -28,14 +33,12 @@ function onDrop(source, target) {
 
     if (move === null) return 'snapback';
 
-    // Записываем ход в Firebase
     set(gameRef, {
         fen: game.fen(),
         turn: game.turn()
     });
 }
 
-// Слушаем изменения из облака
 onValue(gameRef, (snapshot) => {
     const data = snapshot.val();
     if (data && data.fen !== game.fen()) {
@@ -61,14 +64,19 @@ function updateStatus() {
 }
 
 // 3. Создание доски
-board = Chessboard('myBoard', {
-    draggable: true,
-    position: 'start',
-    onDrop: onDrop,
-    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-});
+// Добавим проверку, загружена ли библиотека Chessboard
+if (typeof Chessboard === 'undefined') {
+    console.error("Ошибка: Библиотека Chessboard не загружена!");
+} else {
+    board = Chessboard('myBoard', {
+        draggable: true,
+        position: 'start',
+        onDrop: onDrop,
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    });
+    console.log("Доска инициализирована");
+}
 
-// Клик по инпуту для копирования ссылки
 document.getElementById('room-link').onclick = function() {
     this.select();
     document.execCommand("copy");
