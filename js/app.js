@@ -153,15 +153,13 @@ async function initGame(roomId) {
     });
     const p = (await get(playersRef)).val();
     playerColor = p.white === uid ? 'w' : (p.black === uid ? 'b' : null);
-   // Конфигурация доски в стиле Dark Folk
-board = Chessboard('myBoard', {
-    draggable: !isMobile,
-    onDrop: handleDrop,
-    position: 'start',
-    moveSpeed: 'slow',
-    // ЗАМЕНА НА ТЕМУ ALPHA
-    pieceTheme: 'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png'
-});
+    board = Chessboard('myBoard', {
+        draggable: !isMobile,
+        onDrop: handleDrop,
+        position: 'start',
+        moveSpeed: 'slow',
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    });
     if (playerColor === 'b') board.orientation('black');
     document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : 'Черные';
     $('#myBoard').on('click', '.square-55d63', function() {
