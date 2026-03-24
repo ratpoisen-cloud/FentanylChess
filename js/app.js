@@ -196,13 +196,12 @@ async function initGame(roomId) {
     
     if (playerColor === 'b') board.orientation('black');
     
-    // --- МОБИЛЬНАЯ ЛОГИКА: нажатие на фигуру -> подсветка, нажатие на поле -> ход ---
-    if (isMobile && playerColor) {
-        $('#myBoard').off('click').on('click', '.square-55d63', function() {
-            const square = $(this).attr('data-square');
-            handleMobileClick(square);
-        });
-    }
+    // Небольшая задержка для полной инициализации доски
+    setTimeout(() => {
+        if (isMobile && playerColor) {
+            attachMobileClickHandler();
+        }
+    }, 100);
     
     // Синхронизация игры
     onValue(gameRef, (snap) => {
@@ -222,9 +221,31 @@ async function initGame(roomId) {
     currentRoomId = roomId;
 }
 
+// Прикрепляем обработчик кликов для мобильных устройств
+function attachMobileClickHandler() {
+    // Удаляем старые обработчики
+    $('#myBoard').off('click');
+    
+    // Добавляем новый обработчик на квадраты
+    $('#myBoard .square-55d63').each(function() {
+        $(this).off('click');
+    });
+    
+    // Используем делегирование событий
+    $('#myBoard').on('click', '.square-55d63', function(e) {
+        e.stopPropagation();
+        const square = $(this).attr('data-square');
+        if (square) {
+            handleMobileClick(square);
+        }
+    });
+}
+
 // --- МОБИЛЬНАЯ ЛОГИКА: выделение фигуры и подсветка ходов ---
 function handleMobileClick(square) {
-    // Проверки: игра не окончена, есть цвет игрока, ход игрока, нет ожидающего подтверждения хода
+    console.log("Clicked square:", square); // Для отладки
+    
+    // Проверки
     if (game.game_over()) return;
     if (!playerColor) return;
     if (game.turn() !== playerColor) return;
@@ -276,12 +297,16 @@ function selectSquare(square) {
     selectedSquare = square;
     
     // Подсветка выбранной клетки
-    $(`.square-${square}`).addClass('highlight-selected');
+    const selectedElement = $(`.square-${square}`);
+    selectedElement.addClass('highlight-selected');
     
     // Получаем все возможные ходы для выбранной фигуры
     const moves = game.moves({ square: square, verbose: true });
+    console.log("Possible moves:", moves); // Для отладки
+    
     moves.forEach(move => {
-        $(`.square-${move.to}`).addClass('highlight-possible');
+        const targetSquare = $(`.square-${move.to}`);
+        targetSquare.addClass('highlight-possible');
     });
 }
 
