@@ -21,7 +21,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (roomId) initGame(roomId); else initLobby();
 });
 
-// --- АВТОРИЗАЦИЯ (без Apple) ---
+// --- АВТОРИЗАЦИЯ ---
 function setupAuth() {
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
@@ -70,7 +70,7 @@ function setupAuth() {
     document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.reload());
 }
 
-// --- ЛОББИ (без изменений) ---
+// --- ЛОББИ ---
 function initLobby() {
     document.getElementById('lobby-section').classList.remove('hidden');
     document.getElementById('create-game-btn').onclick = () => {
@@ -165,7 +165,7 @@ async function initGame(roomId) {
         });
     }
 
-        onValue(gameRef, (snap) => {
+    onValue(gameRef, (snap) => {
         const data = snap.val();
         if (!data) return;
 
@@ -174,7 +174,6 @@ async function initGame(roomId) {
             board.position(game.fen());
         }
 
-        // Обновляем takeback окно
         const requestBox = document.getElementById('takeback-request-box');
         if (data.takebackRequest?.status === 'pending' && data.takebackRequest.from !== (currentUser?.uid || 'anon')) {
             requestBox.classList.remove('hidden');
@@ -182,9 +181,12 @@ async function initGame(roomId) {
             requestBox.classList.add('hidden');
         }
 
-        // Главное обновление UI (включая индикатор хода)
         updateUI(data);
     });
+
+    setupGameControls(gameRef, roomId);   // ← важно: вызываем после подписки
+}
+
 // ==================== ДЕСКТОП: Перетаскивание ====================
 function handleDrop(source, target) {
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return 'snapback';
@@ -196,7 +198,7 @@ function handleDrop(source, target) {
     document.getElementById('confirm-move-box').classList.remove('hidden');
 }
 
-// ==================== МОБИЛЬНЫЙ: Выбор + подсветка ходов ====================
+// ==================== МОБИЛЬНЫЙ: Выбор + подсветка ====================
 function onSquareClick(square) {
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return;
 
@@ -236,7 +238,6 @@ function selectSquare(square) {
     selectedSquare = square;
     $(`.square-${square}`).addClass('highlight-selected');
 
-    // Подсветка возможных ходов
     const moves = game.moves({ square: square, verbose: true });
     moves.forEach(m => {
         $(`.square-${m.to}`).addClass('highlight-possible');
@@ -304,7 +305,7 @@ function setupGameControls(gameRef, roomId) {
     linkEl.onclick = function() { this.select(); document.execCommand('copy'); alert('Ссылка скопирована!'); };
 }
 
-// Новые функции для правильного результата игры
+// Результат игры
 function getGameResultMessage() {
     if (game.in_checkmate()) {
         const winner = game.turn() === 'w' ? 'Черные' : 'Белые';
@@ -319,26 +320,21 @@ function getGameResultMessage() {
     return "Игра окончена";
 }
 
-// ==================== Обновление интерфейса ====================
+// ==================== Обновление UI ====================
 function updateUI(data) {
-    // Важно: определяем, чей сейчас ход
-    const currentTurn = game.turn();           // 'w' или 'b'
+    const currentTurn = game.turn();
     const isMyTurn = (playerColor === currentTurn);
 
-    // Обновляем обычный статус
     document.getElementById('status').innerText = 
         `Ход: ${currentTurn === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
 
-    // Обновляем красивый индикатор
     updateTurnIndicator(isMyTurn);
 
-    // История ходов
     const moves = document.getElementById('move-list');
     moves.innerHTML = game.history().map((m, i) => 
         (i % 2 === 0 ? `<span>${Math.floor(i/2) + 1}.</span>` : '') + `<b>${m}</b>`
     ).join(' ');
 
-    // Модальное окно при окончании игры
     if (data.gameState === 'game_over') {
         document.getElementById('game-modal').classList.remove('hidden');
         document.getElementById('modal-desc').innerText = data.message || getGameResultMessage();
@@ -350,7 +346,6 @@ function updateUI(data) {
 function updateTurnIndicator(isMyTurn) {
     const indicator = document.getElementById('turn-indicator');
     const textEl = document.getElementById('turn-text');
-
     if (!indicator || !textEl) return;
 
     if (isMyTurn) {
