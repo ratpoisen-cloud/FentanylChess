@@ -17,7 +17,7 @@
                 <button id="logout-btn" class="btn btn-outline">Выйти</button>
             </div>
             <div id="auth-buttons" class="auth-group">
-                <button id="login-google" class="btn btn-google">Google</button>
+                <button id="login-google" class="btn btn-primary">Google</button>
                 <button id="login-email-trigger" class="btn btn-outline">Email</button>
             </div>
         </div>
@@ -46,7 +46,7 @@
                         <button id="undo-btn" class="btn-round btn-danger">✕</button>
                     </div>
 
-                    <div id="takeback-request-box" class="confirm-overlay hidden">
+                    <div id="takeback-request-box" class="confirm-overlay hidden" style="background: none; box-shadow: none; backdrop-filter: none; padding: 0;">
                         <div class="request-card">
                             <p>Соперник просит отменить последний ход</p>
                             <div class="request-buttons">
@@ -83,21 +83,21 @@
                 <h3>Вход / Регистрация</h3>
                 <input type="email" id="email-input" placeholder="Ваша почта" class="input-field">
                 <input type="password" id="password-input" placeholder="Пароль" class="input-field">
-                <div class="modal-buttons">
-                    <button id="email-auth-btn" class="btn btn-primary">Войти</button>
-                    <button id="close-email-modal" class="btn btn-outline">Отмена</button>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button id="email-auth-btn" class="btn btn-primary" style="flex: 1;">Войти</button>
+                    <button id="close-email-modal" class="btn btn-outline" style="flex: 1;">Отмена</button>
                 </div>
-                <p id="email-error" class="error-text hidden"></p>
+                <p id="email-error" class="error-text hidden" style="color: #ff5252; margin-top: 10px;"></p>
             </div>
         </div>
 
         <div id="game-modal" class="modal hidden">
             <div class="modal-content">
-                <h2 id="modal-title">Игра окончена</h2>
-                <p id="modal-desc" class="modal-desc"></p>
-                <div class="modal-buttons">
-                    <button id="modal-rematch-btn" class="btn btn-primary">Реванш</button>
-                    <button id="modal-exit-btn" class="btn btn-outline">В лобби</button>
+                <h2 id="modal-title" style="margin-top: 0;">Игра окончена</h2>
+                <p id="modal-desc" class="modal-desc" style="margin: 20px 0; color: var(--text-secondary);"></p>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="modal-rematch-btn" class="btn btn-primary btn-large">Новая партия (Реванш)</button>
+                    <button id="modal-exit-btn" class="btn btn-outline">Выйти в лобби</button>
                 </div>
             </div>
         </div>
