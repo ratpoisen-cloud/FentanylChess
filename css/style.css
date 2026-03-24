@@ -286,3 +286,14 @@ body {
 .game-status { font-size: 0.8rem; color: var(--accent); }
 
 .finished .game-status { color: var(--danger); }
+/* Подсветка выбранной фигуры */
+.highlight-selected {
+    background-color: rgba(255, 255, 0, 0.5) !important;
+    box-shadow: inset 0 0 12px 4px rgba(255, 255, 0, 0.9);
+}
+
+/* Подсветка возможных ходов */
+.highlight-possible {
+    background-color: rgba(0, 255, 0, 0.4) !important;
+    box-shadow: inset 0 0 8px 3px rgba(0, 255, 0, 0.7);
+}
