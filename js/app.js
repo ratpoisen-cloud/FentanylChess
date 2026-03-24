@@ -2,8 +2,7 @@ import { db, auth } from './firebase-config.js';
 import { 
     signInWithPopup, GoogleAuthProvider, 
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
-    signOut, onAuthStateChanged, sendEmailVerification,
-    signInWithRedirect, getRedirectResult, browserSessionPersistence, setPersistence
+    signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, set, onValue, runTransaction, update, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -12,11 +11,8 @@ let selectedSquare = null;
 let currentRoomId = null;
 let pendingTakeback = null;
 
-// Определение устройства
 const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                  ('ontouchstart' in window && window.innerWidth < 768);
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-const isAndroid = /Android/.test(navigator.userAgent);
 
 // --- ИНИЦИАЛИЗАЦИЯ ---
 window.addEventListener('DOMContentLoaded', () => {
@@ -26,25 +22,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (roomId) initGame(roomId); else initLobby();
 });
 
-// Проверка приватного режима на iOS
-async function isPrivateMode() {
-    return new Promise((resolve) => {
-        try {
-            const test = localStorage;
-            test.setItem('test', '1');
-            test.removeItem('test');
-            resolve(false);
-        } catch (e) {
-            resolve(true);
-        }
-    });
-}
-
 // --- АВТОРИЗАЦИЯ ---
 function setupAuth() {
-    // Установка персистентности сессии для iOS
-    setPersistence(auth, browserSessionPersistence).catch(console.error);
-    
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
         const authGroup = document.getElementById('auth-buttons');
@@ -61,169 +40,65 @@ function setupAuth() {
         }
     });
 
-    // Обработка redirect авторизации для iOS
-    getRedirectResult(auth).then((result) => {
-        if (result) {
-            console.log("Redirect login success:", result.user);
-            window.location.reload();
-        }
-    }).catch((error) => {
-        console.error("Redirect error:", error);
-    });
-
-    // Google Login с выбором метода для iOS
-    document.getElementById('login-google').onclick = async () => {
-        try {
-            const provider = new GoogleAuthProvider();
-            if (isIOS) {
-                // На iOS используем redirect вместо popup
-                await signInWithRedirect(auth, provider);
-            } else {
-                await signInWithPopup(auth, provider);
-            }
-        } catch (err) {
-            console.error("Google login error:", err);
-            alert("Ошибка входа. Попробуйте войти через Email");
-        }
-    };
+    document.getElementById('login-google').onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
 
     const emailModal = document.getElementById('email-modal');
     const emailError = document.getElementById('email-error');
-    const authLoader = document.getElementById('auth-loader');
     
     const showError = (msg) => {
         emailError.innerText = msg;
         emailError.classList.remove('hidden');
-        if (authLoader) authLoader.classList.add('hidden');
-    };
-    
-    const showLoader = () => {
-        if (authLoader) authLoader.classList.remove('hidden');
-        emailError.classList.add('hidden');
-    };
-    
-    const hideLoader = () => {
-        if (authLoader) authLoader.classList.add('hidden');
     };
 
     document.getElementById('login-email-trigger').onclick = () => {
         emailError.classList.add('hidden');
         emailModal.classList.remove('hidden');
-        hideLoader();
     };
     
-    document.getElementById('close-email-modal').onclick = () => {
-        emailModal.classList.add('hidden');
-        hideLoader();
-    };
+    document.getElementById('close-email-modal').onclick = () => emailModal.classList.add('hidden');
 
-    // Кнопка: ВОЙТИ
     document.getElementById('login-email-btn').onclick = async () => {
         const email = document.getElementById('email-input').value.trim();
         const pass = document.getElementById('password-input').value;
-        
-        if (!email || !pass) {
-            showError("Введите почту и пароль");
-            return;
-        }
-
-        showLoader();
+        if (!email || !pass) return showError("Введите почту и пароль");
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-            
-            // Проверка верификации email (если включено)
-            if (!userCredential.user.emailVerified) {
-                await signOut(auth);
-                showError("Пожалуйста, подтвердите email. Проверьте вашу почту!");
-                return;
-            }
-            
+            await signInWithEmailAndPassword(auth, email, pass);
             emailModal.classList.add('hidden');
             document.getElementById('email-input').value = '';
             document.getElementById('password-input').value = '';
-            hideLoader();
-            
         } catch (err) {
-            console.error("Login Error:", err.code);
-            switch (err.code) {
-                case 'auth/invalid-credential':
-                case 'auth/user-not-found':
-                    showError("Неверная почта или пароль");
-                    break;
-                case 'auth/wrong-password':
-                    showError("Неверный пароль");
-                    break;
-                case 'auth/invalid-email':
-                    showError("Некорректный формат почты");
-                    break;
-                case 'auth/too-many-requests':
-                    showError("Слишком много попыток. Попробуйте позже");
-                    break;
-                default:
-                    showError("Ошибка входа: " + err.message);
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found') {
+                showError("Неверная почта или пароль");
+            } else {
+                showError("Ошибка входа: " + err.message);
             }
         }
     };
 
-    // Кнопка: РЕГИСТРАЦИЯ
     document.getElementById('register-email-btn').onclick = async () => {
         const email = document.getElementById('email-input').value.trim();
         const pass = document.getElementById('password-input').value;
         
-        if (!email) {
-            showError("Введите почту");
-            return;
-        }
-        
-        if (pass.length < 6) {
-            showError("Пароль должен быть не менее 6 символов");
-            return;
-        }
-
-        showLoader();
+        if (!email) return showError("Введите почту");
+        if (pass.length < 6) return showError("Пароль должен быть от 6 символов");
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-            
-            // Отправка письма для подтверждения email
-            await sendEmailVerification(userCredential.user);
-            
+            await createUserWithEmailAndPassword(auth, email, pass);
             emailModal.classList.add('hidden');
             document.getElementById('email-input').value = '';
             document.getElementById('password-input').value = '';
-            hideLoader();
-            
-            alert("Аккаунт успешно создан! Проверьте почту для подтверждения.");
-            
+            alert("Аккаунт успешно создан!");
         } catch (err) {
-            console.error("Registration Error:", err.code);
-            switch (err.code) {
-                case 'auth/email-already-in-use':
-                    showError("Эта почта уже зарегистрирована. Войдите или используйте другую");
-                    break;
-                case 'auth/invalid-email':
-                    showError("Некорректный формат почты");
-                    break;
-                case 'auth/weak-password':
-                    showError("Пароль слишком простой. Используйте минимум 6 символов");
-                    break;
-                default:
-                    showError("Ошибка регистрации: " + err.message);
+            if (err.code === 'auth/email-already-in-use') {
+                showError("Эта почта уже зарегистрирована");
+            } else {
+                showError("Ошибка регистрации: " + err.message);
             }
         }
     };
 
     document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.href = location.origin + location.pathname);
-    
-    // Проверка приватного режима на iOS
-    isPrivateMode().then(isPrivate => {
-        if (isPrivate && isIOS) {
-            setTimeout(() => {
-                alert("Внимание: Приватный режим в Safari может ограничивать функциональность. Рекомендуем отключить его для лучшей работы.");
-            }, 1000);
-        }
-    });
 }
 
 function getGameResultMessage() {
@@ -310,34 +185,23 @@ async function initGame(roomId) {
         document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : 'Черные';
     }
     
-    // Инициализация доски с оптимизациями для iOS
-    const boardConfig = {
+    // Инициализация доски
+    board = Chessboard('myBoard', {
         draggable: !isMobile && playerColor !== null,
         onDrop: handleDrop,
         position: 'start',
-        moveSpeed: 200,
-        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-        showNotation: true
-    };
-    
-    // Для iOS отключаем анимации для производительности
-    if (isIOS) {
-        boardConfig.moveSpeed = 0;
-    }
-    
-    board = Chessboard('myBoard', boardConfig);
+        moveSpeed: 'slow',
+        pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+    });
     
     if (playerColor === 'b') board.orientation('black');
     
-    // Оптимизированная обработка тач-событий для iOS
-    if (isMobile && playerColor) {
-        attachMobileClickHandler();
-    }
-    
-    // Предотвращение скролла при таче на доске
-    $('#myBoard').on('touchmove', function(e) {
-        e.preventDefault();
-    });
+    // Небольшая задержка для полной инициализации доски
+    setTimeout(() => {
+        if (isMobile && playerColor) {
+            attachMobileClickHandler();
+        }
+    }, 100);
     
     // Синхронизация игры
     onValue(gameRef, (snap) => {
@@ -359,37 +223,28 @@ async function initGame(roomId) {
 
 // Прикрепляем обработчик кликов для мобильных устройств
 function attachMobileClickHandler() {
-    // Отключаем drag-and-drop на мобильных
-    if (board && board.destroy && isMobile) {
-        const config = board.getConfig();
-        config.draggable = false;
-        board.destroy();
-        board = Chessboard('myBoard', config);
-    }
-    
     // Удаляем старые обработчики
-    $('#myBoard').off('click touchstart');
+    $('#myBoard').off('click');
     
-    // Используем touchstart для iOS для лучшей отзывчивости
-    const eventType = isIOS ? 'touchstart' : 'click';
+    // Добавляем новый обработчик на квадраты
+    $('#myBoard .square-55d63').each(function() {
+        $(this).off('click');
+    });
     
-    $('#myBoard').on(eventType, '.square-55d63', function(e) {
-        e.preventDefault();
+    // Используем делегирование событий
+    $('#myBoard').on('click', '.square-55d63', function(e) {
         e.stopPropagation();
         const square = $(this).attr('data-square');
         if (square) {
             handleMobileClick(square);
         }
     });
-    
-    // Отключаем перетаскивание изображений
-    $('#myBoard').on('dragstart', 'img', function(e) {
-        e.preventDefault();
-        return false;
-    });
 }
 
+// --- МОБИЛЬНАЯ ЛОГИКА: выделение фигуры и подсветка ходов ---
 function handleMobileClick(square) {
+    console.log("Clicked square:", square); // Для отладки
+    
     // Проверки
     if (game.game_over()) return;
     if (!playerColor) return;
@@ -400,46 +255,62 @@ function handleMobileClick(square) {
     
     // Случай 1: Уже есть выбранная фигура
     if (selectedSquare) {
+        // Если кликнули на ту же фигуру - снимаем выделение
         if (selectedSquare === square) {
             clearSelection();
             return;
         }
         
+        // Пытаемся сделать ход
         const move = game.move({ from: selectedSquare, to: square, promotion: 'q', verbose: true });
         
         if (move) {
+            // Ход валидный - сохраняем для подтверждения
             pendingMove = move;
             board.position(game.fen(), true);
             document.getElementById('confirm-move-box').classList.remove('hidden');
             clearSelection();
         } else {
+            // Ход невалидный - проверяем, может кликнули на другую свою фигуру
             if (piece && piece.color === playerColor) {
+                // Выбираем новую фигуру
                 selectSquare(square);
             } else {
+                // Кликнули на пустую клетку или фигуру соперника - сбрасываем выделение
                 clearSelection();
             }
         }
     } 
+    // Случай 2: Нет выбранной фигуры
     else {
+        // Если кликнули на свою фигуру - выделяем её
         if (piece && piece.color === playerColor) {
             selectSquare(square);
         }
+        // Если кликнули на чужую фигуру или пустую клетку - ничего не делаем
     }
 }
 
+// Выделение фигуры и подсветка доступных ходов
 function selectSquare(square) {
     clearSelection();
     selectedSquare = square;
     
+    // Подсветка выбранной клетки
     const selectedElement = $(`.square-${square}`);
     selectedElement.addClass('highlight-selected');
     
+    // Получаем все возможные ходы для выбранной фигуры
     const moves = game.moves({ square: square, verbose: true });
+    console.log("Possible moves:", moves); // Для отладки
+    
     moves.forEach(move => {
-        $(`.square-${move.to}`).addClass('highlight-possible');
+        const targetSquare = $(`.square-${move.to}`);
+        targetSquare.addClass('highlight-possible');
     });
 }
 
+// Сброс выделения и подсветки
 function clearSelection() {
     selectedSquare = null;
     removeHighlights();
@@ -449,6 +320,7 @@ function removeHighlights() {
     $('#myBoard .square-55d63').removeClass('highlight-selected highlight-possible'); 
 }
 
+// Десктопная логика через drag-and-drop
 function handleDrop(source, target) {
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return 'snapback';
     
@@ -457,12 +329,13 @@ function handleDrop(source, target) {
     
     game.undo();
     pendingMove = testMove;
-    setTimeout(() => board.position(game.fen(), true), 50);
+    setTimeout(() => board.position(game.fen(), true), 100);
     document.getElementById('confirm-move-box').classList.remove('hidden');
     return 'snapback';
 }
 
 function setupGameControls(gameRef, roomId) {
+    // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
         if (!pendingMove) return;
         
@@ -480,6 +353,7 @@ function setupGameControls(gameRef, roomId) {
         clearSelection();
     };
     
+    // Отмена неподтвержденного хода
     document.getElementById('cancel-move-btn').onclick = () => {
         if (pendingMove) {
             pendingMove = null;
@@ -489,6 +363,7 @@ function setupGameControls(gameRef, roomId) {
         }
     };
     
+    // Сдача
     document.getElementById('resign-btn').onclick = () => {
         if (game.game_over()) {
             alert("Игра уже окончена");
@@ -505,12 +380,14 @@ function setupGameControls(gameRef, roomId) {
         }
     };
     
+    // Выход в лобби
     document.getElementById('exit-btn').onclick = () => {
         if (confirm("Выйти в лобби?")) {
             location.href = location.origin + location.pathname;
         }
     };
     
+    // Поделиться ссылкой
     document.getElementById('share-btn').onclick = async () => {
         const link = document.getElementById('room-link').value;
         if (navigator.share) {
@@ -525,6 +402,7 @@ function setupGameControls(gameRef, roomId) {
         }
     };
     
+    // Запрос отмены хода
     document.getElementById('takeback-btn').onclick = () => {
         if (game.history().length === 0) {
             alert("Нет ходов для отмены");
@@ -573,6 +451,7 @@ function setupGameControls(gameRef, roomId) {
         pendingTakeback = null;
     };
     
+    // Реванш
     document.getElementById('modal-rematch-btn').onclick = async () => {
         const modal = document.getElementById('game-modal');
         modal.classList.add('hidden');
