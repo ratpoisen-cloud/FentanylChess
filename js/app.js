@@ -1,6 +1,6 @@
 import { db, auth } from './firebase-config.js';
 import { 
-    signInWithPopup, GoogleAuthProvider, OAuthProvider, 
+    signInWithPopup, GoogleAuthProvider, 
     signInWithEmailAndPassword, createUserWithEmailAndPassword,
     signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -8,6 +8,10 @@ import { ref, set, onValue, runTransaction, update, get } from "https://www.gsta
 
 let board, game = new Chess(), playerColor = null, pendingMove = null, currentUser = null;
 let selectedSquare = null;
+
+// Определяем мобильное устройство
+const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                 ('ontouchstart' in window && window.innerWidth < 768);
 
 // --- ИНИЦИАЛИЗАЦИЯ ---
 window.addEventListener('DOMContentLoaded', () => {
@@ -17,7 +21,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (roomId) initGame(roomId); else initLobby();
 });
 
-// --- АВТОРИЗАЦИЯ ---
+// --- АВТОРИЗАЦИЯ (без Apple) ---
 function setupAuth() {
     onAuthStateChanged(auth, (user) => {
         currentUser = user;
@@ -28,7 +32,6 @@ function setupAuth() {
             userInfo?.classList.remove('hidden');
             document.getElementById('user-name').innerText = user.displayName || user.email.split('@')[0];
             document.getElementById('user-photo').src = user.photoURL || 'https://via.placeholder.com/35';
-            // Если мы не в комнате, обновляем лобби
             if (!new URLSearchParams(window.location.search).get('room')) loadLobby(user);
         } else {
             authGroup?.classList.remove('hidden');
@@ -36,31 +39,46 @@ function setupAuth() {
         }
     });
 
-    document.getElementById('login-google').onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
-    document.getElementById('login-apple').onclick = () => signInWithPopup(auth, new OAuthProvider('apple.com'));
-    
+    // Google
+    document.getElementById('login-google').onclick = () => 
+        signInWithPopup(auth, new GoogleAuthProvider());
+
+    // Email
     const emailModal = document.getElementById('email-modal');
-    document.getElementById('login-email-trigger').onclick = () => emailModal.classList.remove('hidden');
-    document.getElementById('close-email-modal').onclick = () => emailModal.classList.add('hidden');
+    document.getElementById('login-email-trigger').onclick = () => 
+        emailModal.classList.remove('hidden');
+    
+    document.getElementById('close-email-modal').onclick = () => 
+        emailModal.classList.add('hidden');
     
     document.getElementById('email-auth-btn').onclick = async () => {
-        const email = document.getElementById('email-input').value;
+        const email = document.getElementById('email-input').value.trim();
         const pass = document.getElementById('password-input').value;
+        
+        if (!email || !pass) return alert("Введите email и пароль");
+
         try {
             await signInWithEmailAndPassword(auth, email, pass);
             emailModal.classList.add('hidden');
         } catch (err) {
             if (err.code === 'auth/user-not-found') {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                emailModal.classList.add('hidden');
-            } else { alert(err.message); }
+                try {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    emailModal.classList.add('hidden');
+                } catch (createErr) {
+                    alert("Ошибка регистрации: " + createErr.message);
+                }
+            } else {
+                alert("Ошибка: " + err.message);
+            }
         }
     };
 
-    document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => location.href = location.origin + location.pathname);
+    document.getElementById('logout-btn').onclick = () => 
+        signOut(auth).then(() => location.reload());
 }
 
-// --- ЛОББИ (ОБНОВЛЕННОЕ) ---
+// --- ЛОББИ ---
 function initLobby() {
     document.getElementById('lobby-section').classList.remove('hidden');
     document.getElementById('create-game-btn').onclick = () => {
@@ -74,9 +92,11 @@ function loadLobby(user) {
     onValue(ref(db, `games`), (snap) => {
         list.innerHTML = '';
         const games = snap.val();
-        if (!games) { list.innerHTML = "Нет активных партий"; return; }
-        
-        // Превращаем в массив для сортировки (активные выше)
+        if (!games) {
+            list.innerHTML = "Нет активных партий";
+            return;
+        }
+
         const sortedGames = Object.entries(games).sort((a, b) => {
             const statusA = a[1].gameState === 'game_over' ? 1 : 0;
             const statusB = b[1].gameState === 'game_over' ? 1 : 0;
@@ -87,13 +107,10 @@ function loadLobby(user) {
             const p = data.players;
             if (p && (p.white === user.uid || p.black === user.uid)) {
                 const isOver = data.gameState === 'game_over';
-                
-                // Определяем соперника
                 const opponentName = (p.white === user.uid) 
                     ? (p.blackName || "Ожидание...") 
                     : (p.whiteName || "Ожидание...");
 
-                // Формируем текст статуса
                 let statusText = isOver ? `🏁 ${data.message}` : "🟢 Идет игра";
                 if (!isOver && data.turn) {
                     const myColor = p.white === user.uid ? 'w' : 'b';
@@ -118,18 +135,21 @@ function loadLobby(user) {
     });
 }
 
-// --- ИГРА (С ЗАПИСЬЮ ИМЕН) ---
+// --- ИГРА ---
 async function initGame(roomId) {
     document.getElementById('game-section').classList.remove('hidden');
-    
-    const user = await new Promise(res => { const unsub = onAuthStateChanged(auth, u => { unsub(); res(u); })});
-    const uid = user ? user.uid : 'anon';
+    document.getElementById('lobby-section').classList.add('hidden');
+
+    const user = await new Promise(res => { 
+        const unsub = onAuthStateChanged(auth, u => { unsub(); res(u); });
+    });
+
+    const uid = user ? user.uid : 'anon_' + Math.random().toString(36).substring(2, 9);
     const uName = user ? (user.displayName || user.email.split('@')[0]) : 'Аноним';
 
     const gameRef = ref(db, `games/${roomId}`);
     const playersRef = ref(db, `games/${roomId}/players`);
 
-    // Транзакция для корректного распределения ролей и ИМЕН
     await runTransaction(playersRef, (p) => {
         if (!p) return { white: uid, whiteName: uName };
         if (p.white === uid || p.black === uid) return;
@@ -140,30 +160,35 @@ async function initGame(roomId) {
     const p = (await get(playersRef)).val();
     playerColor = p.white === uid ? 'w' : (p.black === uid ? 'b' : null);
 
+    // Создаём доску
     board = Chessboard('myBoard', {
-        draggable: false, 
+        draggable: !isMobile,
+        onDrop: isMobile ? undefined : handleDrop,
         position: 'start',
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     });
 
-    $('#myBoard').on('click', '.square-55d63', function() {
-        onSquareClick($(this).attr('data-square'));
-    });
-
     if (playerColor === 'b') board.orientation('black');
-    document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : (playerColor === 'b' ? 'Черные' : 'Зритель');
+    document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : 'Черные';
+
+    // Мобильный режим — клики
+    if (isMobile) {
+        $('#myBoard').on('click', '.square-55d63', function() {
+            onSquareClick($(this).attr('data-square'));
+        });
+    }
 
     onValue(gameRef, (snap) => {
         const data = snap.val();
         if (!data) return;
+
         if (data.pgn && data.pgn !== game.pgn()) {
             game.load_pgn(data.pgn);
             board.position(game.fen());
         }
-        
-        // Takeback логика
+
         const requestBox = document.getElementById('takeback-request-box');
-        if (data.takebackRequest?.status === 'pending' && data.takebackRequest.from !== auth.currentUser?.uid) {
+        if (data.takebackRequest?.status === 'pending' && data.takebackRequest.from !== uid) {
             requestBox.classList.remove('hidden');
         } else {
             requestBox.classList.add('hidden');
@@ -175,7 +200,20 @@ async function initGame(roomId) {
     setupGameControls(gameRef, roomId);
 }
 
+// Десктоп: перетаскивание
+function handleDrop(source, target) {
+    if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) {
+        return 'snapback';
+    }
 
+    const move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+
+    pendingMove = move;
+    document.getElementById('confirm-move-box').classList.remove('hidden');
+}
+
+// Мобильный: клики
 function onSquareClick(square) {
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return;
 
@@ -200,24 +238,30 @@ function onSquareClick(square) {
     }
 }
 
-function selectSquare(s) { removeHighlight(); selectedSquare = s; $(`.square-${s}`).addClass('highlight-selected'); }
-function removeHighlight() { $('.square-55d63').removeClass('highlight-selected'); }
+function selectSquare(s) {
+    removeHighlight();
+    selectedSquare = s;
+    $(`.square-${s}`).addClass('highlight-selected');
+}
 
+function removeHighlight() {
+    $('.square-55d63').removeClass('highlight-selected');
+}
+
+// Управление игрой
 function setupGameControls(gameRef, roomId) {
-    // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
         if (!pendingMove) return;
-        const updateData = { pgn: game.pgn(), fen: game.fen(), turn: game.turn(), lastMoveBy: auth.currentUser?.uid };
-        if (game.game_over()) { 
-            updateData.gameState = 'game_over'; 
-            updateData.message = game.in_checkmate() ? 'Мат!' : 'Ничья!'; 
+        const updateData = { pgn: game.pgn(), fen: game.fen(), turn: game.turn() };
+        if (game.game_over()) {
+            updateData.gameState = 'game_over';
+            updateData.message = game.in_checkmate() ? 'Мат!' : 'Ничья!';
         }
         update(gameRef, updateData);
         pendingMove = null;
         document.getElementById('confirm-move-box').classList.add('hidden');
     };
 
-    // Отмена текущего выбора (✕)
     document.getElementById('undo-btn').onclick = () => {
         game.undo();
         board.position(game.fen());
@@ -225,18 +269,19 @@ function setupGameControls(gameRef, roomId) {
         document.getElementById('confirm-move-box').classList.add('hidden');
     };
 
-    // ЗАПРОС ВОЗВРАТА ХОДА (Takeback)
     document.getElementById('takeback-btn').onclick = () => {
         if (game.history().length === 0 || pendingMove) return;
-        update(gameRef, { takebackRequest: { from: auth.currentUser.uid, status: 'pending' } });
+        update(gameRef, { takebackRequest: { from: currentUser?.uid || 'anon', status: 'pending' } });
         alert("Запрос на возврат хода отправлен...");
     };
 
     document.getElementById('takeback-accept').onclick = () => {
-        game.undo(); 
+        game.undo();
         update(gameRef, {
-            pgn: game.pgn(), fen: game.fen(), turn: game.turn(),
-            takebackRequest: null 
+            pgn: game.pgn(),
+            fen: game.fen(),
+            turn: game.turn(),
+            takebackRequest: null
         });
     };
 
@@ -244,7 +289,6 @@ function setupGameControls(gameRef, roomId) {
         update(gameRef, { takebackRequest: null });
     };
 
-    // Сдаться
     document.getElementById('resign-btn').onclick = () => {
         if (confirm("Сдаться?")) {
             const win = playerColor === 'w' ? 'Черные' : 'Белые';
@@ -252,10 +296,9 @@ function setupGameControls(gameRef, roomId) {
         }
     };
 
-    // Навигация
     document.getElementById('exit-btn').onclick = () => location.href = location.origin + location.pathname;
     document.getElementById('modal-exit-btn').onclick = () => location.href = location.origin + location.pathname;
-    
+
     document.getElementById('modal-rematch-btn').onclick = async () => {
         const p = (await get(ref(db, `games/${roomId}/players`))).val();
         await set(ref(db, `games/${roomId}/players`), { white: p.black || 'anon', black: p.white || 'anon' });
@@ -265,14 +308,21 @@ function setupGameControls(gameRef, roomId) {
 
     const linkEl = document.getElementById('room-link');
     linkEl.value = window.location.href;
-    linkEl.onclick = function() { this.select(); document.execCommand('copy'); alert('Ссылка скопирована!'); };
+    linkEl.onclick = function() { 
+        this.select(); 
+        document.execCommand('copy'); 
+        alert('Ссылка скопирована!'); 
+    };
 }
 
 function updateUI(data) {
     document.getElementById('status').innerText = `Ход: ${game.turn() === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
-    const moves = document.getElementById('move-list');
-    if (moves) moves.innerHTML = game.history().map((m, i) => (i%2===0 ? `<span>${i/2+1}.</span>` : '') + `<b>${m}</b>`).join(' ');
     
+    const moves = document.getElementById('move-list');
+    moves.innerHTML = game.history().map((m, i) => 
+        (i%2===0 ? `<span>${Math.floor(i/2)+1}.</span>` : '') + `<b>${m}</b>`
+    ).join(' ');
+
     if (data.gameState === 'game_over') {
         document.getElementById('game-modal').classList.remove('hidden');
         document.getElementById('modal-desc').innerText = data.message;
