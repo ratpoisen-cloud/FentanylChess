@@ -346,17 +346,27 @@ function updateUI(data) {
     const currentTurn = game.turn();
     const isMyTurn = (playerColor === currentTurn);
 
-    document.getElementById('status').innerText = 
-        `Ход: ${currentTurn === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
+    // Обновляем статус только если элемент существует
+    const statusEl = document.getElementById('status');
+    if (statusEl) {
+        statusEl.innerText = `Ход: ${currentTurn === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
+    }
 
     updateTurnIndicator(isMyTurn);
 
     const moves = document.getElementById('move-list');
-    moves.innerHTML = game.history().map((m, i) => 
-        (i % 2 === 0 ? `<span>${Math.floor(i/2)+1}.</span>` : '') + `<b>${m}</b>`
-    ).join(' ');
+    if (moves) {
+        moves.innerHTML = game.history().map((m, i) => 
+            (i % 2 === 0 ? `<span>${Math.floor(i/2)+1}.</span>` : '') + `<b>${m}</b>`
+        ).join(' ');
+    }
 
-    if (data.gameState === 'game_over') {
+    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: 
+    // Показываем модальное окно только если активна секция игры
+    const gameSection = document.getElementById('game-section');
+    const isGameVisible = gameSection && !gameSection.classList.contains('hidden');
+
+    if (data.gameState === 'game_over' && isGameVisible) {
         document.getElementById('game-modal').classList.remove('hidden');
         document.getElementById('modal-desc').innerText = data.message || getGameResultMessage();
     } else {
