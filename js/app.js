@@ -151,17 +151,20 @@ async function initGame(roomId) {
 
     // Конфигурация доски
     board = Chessboard('myBoard', {
-        draggable: !isMobile, // На мобилках отключаем перетаскивание
-        onDrop: isMobile ? undefined : handleDrop,
+        draggable: !isMobile, // Тянем только на десктопе
+        onDrop: handleDrop,
         position: 'start',
+        moveSpeed: 'slow',    // Плавное движение фигур
+        snapbackSpeed: 500,   // Плавный возврат
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
     });
 
     if (playerColor === 'b') board.orientation('black');
     document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : 'Черные';
 
-    // Обработчик кликов (универсальный для мобилок и ПК)
+    // Слушатель кликов только для мобилок
     $('#myBoard').on('click', '.square-55d63', function() {
+        if (!isMobile) return; 
         const square = $(this).attr('data-square');
         handleSquareClick(square);
     });
@@ -172,7 +175,7 @@ async function initGame(roomId) {
 
         if (data.pgn && data.pgn !== game.pgn()) {
             game.load_pgn(data.pgn);
-            board.position(game.fen());
+            board.position(game.fen(), true); // true для анимации
         }
 
         const gameSection = document.getElementById('game-section');
@@ -193,8 +196,9 @@ async function initGame(roomId) {
     setupGameControls(gameRef, roomId);
 }
 
-// --- ЛОГИКА ХОДОВ (КЛИКИ) ---
+// --- ЛОГИКА МОБИЛЬНЫХ ХОДОВ (КЛИКИ) ---
 function handleSquareClick(square) {
+    if (!isMobile) return; 
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return;
 
     if (selectedSquare === square) {
@@ -206,13 +210,11 @@ function handleSquareClick(square) {
     const piece = game.get(square);
 
     if (selectedSquare) {
-        // Если кликнули на другую свою фигуру — переключаем выбор
         if (piece && piece.color === playerColor) {
             selectSquare(square);
             return;
         }
 
-        // Пытаемся сделать ход
         const move = game.move({
             from: selectedSquare,
             to: square,
@@ -221,7 +223,7 @@ function handleSquareClick(square) {
 
         if (move) {
             pendingMove = move;
-            board.position(game.fen());
+            board.position(game.fen(), true); // Плавная анимация перемещения
             document.getElementById('confirm-move-box').classList.remove('hidden');
             removeHighlights();
             selectedSquare = null;
@@ -230,7 +232,6 @@ function handleSquareClick(square) {
             selectedSquare = null;
         }
     } else {
-        // Выбираем свою фигуру
         if (piece && piece.color === playerColor) {
             selectSquare(square);
         }
@@ -240,9 +241,7 @@ function handleSquareClick(square) {
 function selectSquare(square) {
     removeHighlights();
     selectedSquare = square;
-    
     $(`.square-${square}`).addClass('highlight-selected');
-
     const moves = game.moves({ square: square, verbose: true });
     moves.forEach(m => {
         $(`.square-${m.to}`).addClass('highlight-possible');
@@ -261,7 +260,12 @@ function handleDrop(source, target) {
     if (move === null) return 'snapback';
 
     pendingMove = move;
-    board.position(game.fen());
+    
+    // Небольшая задержка, чтобы анимация броска завершилась корректно
+    setTimeout(() => {
+        board.position(game.fen(), true);
+    }, 100);
+
     document.getElementById('confirm-move-box').classList.remove('hidden');
     removeHighlights();
     return move;
@@ -283,7 +287,7 @@ function setupGameControls(gameRef, roomId) {
 
     document.getElementById('undo-btn').onclick = () => {
         game.undo();
-        board.position(game.fen());
+        board.position(game.fen(), true);
         pendingMove = null;
         document.getElementById('confirm-move-box').classList.add('hidden');
         removeHighlights();
