@@ -250,6 +250,7 @@ function removeHighlights() {
 
 // ==================== Управление игрой ====================
 function setupGameControls(gameRef, roomId) {
+    // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
         if (!pendingMove) return;
         const updateData = { pgn: game.pgn(), fen: game.fen(), turn: game.turn() };
@@ -262,6 +263,7 @@ function setupGameControls(gameRef, roomId) {
         document.getElementById('confirm-move-box').classList.add('hidden');
     };
 
+    // Отмена хода
     document.getElementById('undo-btn').onclick = () => {
         game.undo();
         board.position(game.fen());
@@ -270,6 +272,7 @@ function setupGameControls(gameRef, roomId) {
         removeHighlights();
     };
 
+    // Запрос takeback
     document.getElementById('takeback-btn').onclick = () => {
         if (game.history().length === 0 || pendingMove) return;
         update(gameRef, { takebackRequest: { from: currentUser?.uid || 'anon', status: 'pending' } });
@@ -283,6 +286,7 @@ function setupGameControls(gameRef, roomId) {
 
     document.getElementById('takeback-reject').onclick = () => update(gameRef, { takebackRequest: null });
 
+    // Сдаться
     document.getElementById('resign-btn').onclick = () => {
         if (confirm("Сдаться?")) {
             const win = playerColor === 'w' ? 'Черные' : 'Белые';
@@ -290,6 +294,7 @@ function setupGameControls(gameRef, roomId) {
         }
     };
 
+    // Навигация
     document.getElementById('exit-btn').onclick = () => location.href = location.origin + location.pathname;
     document.getElementById('modal-exit-btn').onclick = () => location.href = location.origin + location.pathname;
 
@@ -300,24 +305,46 @@ function setupGameControls(gameRef, roomId) {
         location.reload();
     };
 
+    // === НОВОЕ: Поделиться ссылкой ===
     const linkEl = document.getElementById('room-link');
-    linkEl.value = window.location.href;
-    linkEl.onclick = function() { this.select(); document.execCommand('copy'); alert('Ссылка скопирована!'); };
-}
+    const shareBtn = document.getElementById('share-btn');
 
-// Результат игры
-function getGameResultMessage() {
-    if (game.in_checkmate()) {
-        const winner = game.turn() === 'w' ? 'Черные' : 'Белые';
-        return `Мат! ${winner} победили`;
-    }
-    if (game.in_draw()) {
-        if (game.in_stalemate()) return "Ничья (пат)";
-        if (game.in_threefold_repetition()) return "Ничья (трёхкратное повторение)";
-        if (game.insufficient_material()) return "Ничья (недостаточно материала)";
-        return "Ничья";
-    }
-    return "Игра окончена";
+    linkEl.value = window.location.href;
+
+    // Клик по полю — копирование (fallback)
+    linkEl.onclick = () => {
+        linkEl.select();
+        document.execCommand('copy');
+        alert('Ссылка скопирована в буфер обмена!');
+    };
+
+    // Основная кнопка "Поделиться"
+    shareBtn.onclick = async () => {
+        const shareData = {
+            title: 'Приглашение в Fentanyl Chess',
+            text: 'Присоединяйся ко мне в шахматы!',
+            url: window.location.href
+        };
+
+        try {
+            // Современный способ (мобильные + Chrome)
+            if (navigator.share && navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            } else {
+                // Fallback для десктопа и старых браузеров
+                linkEl.select();
+                document.execCommand('copy');
+                alert('Ссылка скопирована! Теперь можешь отправить её в мессенджер.');
+            }
+        } catch (err) {
+            // Если пользователь отменил шаринг
+            if (err.name !== 'AbortError') {
+                alert('Не удалось поделиться. Ссылка скопирована в буфер.');
+                linkEl.select();
+                document.execCommand('copy');
+            }
+        }
+    };
 }
 
 // ==================== Обновление UI ====================
