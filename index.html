@@ -80,14 +80,16 @@
 
         <div id="email-modal" class="modal hidden">
             <div class="modal-content">
-                <h3>Вход / Регистрация</h3>
+                <h3>Вход или Регистрация</h3>
                 <input type="email" id="email-input" placeholder="Ваша почта" class="input-field">
-                <input type="password" id="password-input" placeholder="Пароль" class="input-field">
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button id="email-auth-btn" class="btn btn-primary" style="flex: 1;">Войти</button>
-                    <button id="close-email-modal" class="btn btn-outline" style="flex: 1;">Отмена</button>
+                <input type="password" id="password-input" placeholder="Пароль (мин. 6 символов)" class="input-field">
+                
+                <div class="modal-buttons" style="flex-direction: column; gap: 10px;">
+                    <button id="login-email-btn" class="btn btn-primary" style="width: 100%;">Войти</button>
+                    <button id="register-email-btn" class="btn btn-outline" style="width: 100%;">Создать аккаунт</button>
+                    <button id="close-email-modal" class="btn btn-danger" style="width: 100%; background: transparent; color: var(--danger);">Отмена</button>
                 </div>
-                <p id="email-error" class="error-text hidden" style="color: #ff5252; margin-top: 10px;"></p>
+                <p id="email-error" class="error-text hidden" style="color: var(--danger); margin-top: 15px; font-size: 0.9em;"></p>
             </div>
         </div>
 
