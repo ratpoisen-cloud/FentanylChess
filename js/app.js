@@ -323,22 +323,27 @@ function getGameResultMessage() {
 
 // ==================== Обновление интерфейса ====================
 function updateUI(data) {
-    const isMyTurn = game.turn() === playerColor;
-    
+    // Важно: определяем, чей сейчас ход
+    const currentTurn = game.turn();           // 'w' или 'b'
+    const isMyTurn = (playerColor === currentTurn);
+
+    // Обновляем обычный статус
     document.getElementById('status').innerText = 
-        `Ход: ${game.turn() === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
+        `Ход: ${currentTurn === 'w' ? 'Белых' : 'Черных'}${game.in_check() ? ' (Шах!)' : ''}`;
 
     // Обновляем красивый индикатор
     updateTurnIndicator(isMyTurn);
 
+    // История ходов
     const moves = document.getElementById('move-list');
     moves.innerHTML = game.history().map((m, i) => 
-        (i%2===0 ? `<span>${Math.floor(i/2)+1}.</span>` : '') + `<b>${m}</b>`
+        (i % 2 === 0 ? `<span>${Math.floor(i/2) + 1}.</span>` : '') + `<b>${m}</b>`
     ).join(' ');
 
+    // Модальное окно при окончании игры
     if (data.gameState === 'game_over') {
         document.getElementById('game-modal').classList.remove('hidden');
-        document.getElementById('modal-desc').innerText = data.message;
+        document.getElementById('modal-desc').innerText = data.message || getGameResultMessage();
     } else {
         document.getElementById('game-modal').classList.add('hidden');
     }
@@ -347,6 +352,8 @@ function updateUI(data) {
 function updateTurnIndicator(isMyTurn) {
     const indicator = document.getElementById('turn-indicator');
     const textEl = document.getElementById('turn-text');
+
+    if (!indicator || !textEl) return;
 
     if (isMyTurn) {
         indicator.classList.remove('opponent-turn');
