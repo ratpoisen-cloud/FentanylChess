@@ -41,8 +41,12 @@ function setupAuth() {
     document.getElementById('login-google').onclick = () => signInWithPopup(auth, new GoogleAuthProvider());
 
     const emailModal = document.getElementById('email-modal');
-    document.getElementById('login-email-trigger').onclick = () => emailModal.classList.remove('hidden');
-    document.getElementById('close-email-modal').onclick = () => emailModal.classList.add('hidden');
+    if (document.getElementById('login-email-trigger')) {
+        document.getElementById('login-email-trigger').onclick = () => emailModal.classList.remove('hidden');
+    }
+    if (document.getElementById('close-email-modal')) {
+        document.getElementById('close-email-modal').onclick = () => emailModal.classList.add('hidden');
+    }
     
     document.getElementById('email-auth-btn').onclick = async () => {
         const email = document.getElementById('email-input').value.trim();
@@ -72,7 +76,7 @@ function setupAuth() {
 // --- ЛОББИ ---
 function initLobby() {
     document.getElementById('lobby-section').classList.remove('hidden');
-    document.getElementById('game-section').classList.add('hidden'); // Гарантированно прячем игру
+    document.getElementById('game-section').classList.add('hidden');
     
     document.getElementById('create-game-btn').onclick = () => {
         const id = Math.random().toString(36).substring(2, 8);
@@ -102,11 +106,6 @@ function loadLobby(user) {
                     : (p.whiteName || "Ожидание...");
 
                 let statusText = isOver ? `🏁 ${data.message}` : "🟢 Идет игра";
-                if (!isOver && data.turn) {
-                    const myColor = p.white === user.uid ? 'w' : 'b';
-                    statusText += (data.turn === myColor) ? " (Ваш ход!)" : " (Ход соперника)";
-                }
-
                 const item = document.createElement('div');
                 item.className = `game-item ${isOver ? 'finished' : 'active'}`;
                 item.innerHTML = `
@@ -150,8 +149,9 @@ async function initGame(roomId) {
     const p = (await get(playersRef)).val();
     playerColor = p.white === uid ? 'w' : (p.black === uid ? 'b' : null);
 
+    // Конфигурация доски
     board = Chessboard('myBoard', {
-        draggable: !isMobile,
+        draggable: !isMobile, // На мобилках отключаем перетаскивание
         onDrop: isMobile ? undefined : handleDrop,
         position: 'start',
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
@@ -160,11 +160,11 @@ async function initGame(roomId) {
     if (playerColor === 'b') board.orientation('black');
     document.getElementById('user-color').innerText = playerColor === 'w' ? 'Белые' : 'Черные';
 
-    if (isMobile) {
-        $('#myBoard').on('click', '.square-55d63', function() {
-            onSquareClick($(this).attr('data-square'));
-        });
-    }
+    // Обработчик кликов (универсальный для мобилок и ПК)
+    $('#myBoard').on('click', '.square-55d63', function() {
+        const square = $(this).attr('data-square');
+        handleSquareClick(square);
+    });
 
     onValue(gameRef, (snap) => {
         const data = snap.val();
@@ -179,10 +179,12 @@ async function initGame(roomId) {
         const isGameActive = gameSection && !gameSection.classList.contains('hidden');
         
         const requestBox = document.getElementById('takeback-request-box');
-        if (isGameActive && data.takebackRequest?.status === 'pending' && data.takebackRequest.from !== (currentUser?.uid || 'anon')) {
-            requestBox.classList.remove('hidden');
-        } else {
-            requestBox.classList.add('hidden');
+        if (requestBox) {
+            if (isGameActive && data.takebackRequest?.status === 'pending' && data.takebackRequest.from !== (currentUser?.uid || 'anon')) {
+                requestBox.classList.remove('hidden');
+            } else {
+                requestBox.classList.add('hidden');
+            }
         }
 
         updateUI(data);
@@ -191,30 +193,8 @@ async function initGame(roomId) {
     setupGameControls(gameRef, roomId);
 }
 
-// ==================== ДЕСКТОП: Перетаскивание ====================
-function handleDrop(source, target) {
-    if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return 'snapback';
-
-    let move = null;
-
-    if ((source === 'e1' && (target === 'h1' || target === 'a1')) || 
-        (source === 'e8' && (target === 'h8' || target === 'a8'))) {
-        const isKingside = target === 'h1' || target === 'h8';
-        move = game.move(isKingside ? 'O-O' : 'O-O-O');
-    } else {
-        move = game.move({ from: source, to: target, promotion: 'q' });
-    }
-
-    if (move === null) return 'snapback';
-
-    pendingMove = move;
-    board.position(game.fen());
-    document.getElementById('confirm-move-box').classList.remove('hidden');
-    return move;
-}
-
-// ==================== МОБИЛЬНЫЙ ====================
-function onSquareClick(square) {
+// --- ЛОГИКА ХОДОВ (КЛИКИ) ---
+function handleSquareClick(square) {
     if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return;
 
     if (selectedSquare === square) {
@@ -223,8 +203,22 @@ function onSquareClick(square) {
         return;
     }
 
+    const piece = game.get(square);
+
     if (selectedSquare) {
-        const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+        // Если кликнули на другую свою фигуру — переключаем выбор
+        if (piece && piece.color === playerColor) {
+            selectSquare(square);
+            return;
+        }
+
+        // Пытаемся сделать ход
+        const move = game.move({
+            from: selectedSquare,
+            to: square,
+            promotion: 'q'
+        });
+
         if (move) {
             pendingMove = move;
             board.position(game.fen());
@@ -232,30 +226,48 @@ function onSquareClick(square) {
             removeHighlights();
             selectedSquare = null;
         } else {
-            const piece = game.get(square);
-            if (piece && piece.color === playerColor) selectSquare(square);
-            else { removeHighlights(); selectedSquare = null; }
+            removeHighlights();
+            selectedSquare = null;
         }
     } else {
-        const piece = game.get(square);
-        if (piece && piece.color === playerColor) selectSquare(square);
+        // Выбираем свою фигуру
+        if (piece && piece.color === playerColor) {
+            selectSquare(square);
+        }
     }
 }
 
 function selectSquare(square) {
     removeHighlights();
     selectedSquare = square;
+    
     $(`.square-${square}`).addClass('highlight-selected');
 
     const moves = game.moves({ square: square, verbose: true });
-    moves.forEach(m => $(`.square-${m.to}`).addClass('highlight-possible'));
+    moves.forEach(m => {
+        $(`.square-${m.to}`).addClass('highlight-possible');
+    });
 }
 
 function removeHighlights() {
-    $('.square-55d63').removeClass('highlight-selected highlight-possible');
+    $('#myBoard .square-55d63').removeClass('highlight-selected highlight-possible');
 }
 
-// ==================== Управление ====================
+// --- ДЕСКТОП: Drag & Drop ---
+function handleDrop(source, target) {
+    if (game.game_over() || !playerColor || game.turn() !== playerColor || pendingMove) return 'snapback';
+
+    const move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+
+    pendingMove = move;
+    board.position(game.fen());
+    document.getElementById('confirm-move-box').classList.remove('hidden');
+    removeHighlights();
+    return move;
+}
+
+// --- УПРАВЛЕНИЕ ---
 function setupGameControls(gameRef, roomId) {
     document.getElementById('confirm-btn').onclick = () => {
         if (!pendingMove) return;
@@ -280,15 +292,20 @@ function setupGameControls(gameRef, roomId) {
     document.getElementById('takeback-btn').onclick = () => {
         if (game.history().length === 0 || pendingMove) return;
         update(gameRef, { takebackRequest: { from: currentUser?.uid || 'anon', status: 'pending' } });
-        alert("Запрос на возврат хода отправлен...");
     };
 
-    document.getElementById('takeback-accept').onclick = () => {
-        game.undo();
-        update(gameRef, { pgn: game.pgn(), fen: game.fen(), turn: game.turn(), takebackRequest: null });
-    };
+    const tAccept = document.getElementById('takeback-accept');
+    if (tAccept) {
+        tAccept.onclick = () => {
+            game.undo();
+            update(gameRef, { pgn: game.pgn(), fen: game.fen(), turn: game.turn(), takebackRequest: null });
+        };
+    }
 
-    document.getElementById('takeback-reject').onclick = () => update(gameRef, { takebackRequest: null });
+    const tReject = document.getElementById('takeback-reject');
+    if (tReject) {
+        tReject.onclick = () => update(gameRef, { takebackRequest: null });
+    }
 
     document.getElementById('resign-btn').onclick = () => {
         if (confirm("Сдаться?")) {
@@ -301,34 +318,23 @@ function setupGameControls(gameRef, roomId) {
     document.getElementById('modal-exit-btn').onclick = () => location.href = location.origin + location.pathname;
 
     document.getElementById('modal-rematch-btn').onclick = async () => {
-        const p = (await get(ref(db, `games/${roomId}/players`))).val();
+        const pSnapshot = await get(ref(db, `games/${roomId}/players`));
+        const p = pSnapshot.val();
         await set(ref(db, `games/${roomId}/players`), { white: p.black || 'anon', black: p.white || 'anon' });
         await update(gameRef, { pgn: '', fen: 'start', turn: 'w', gameState: 'playing', takebackRequest: null });
         location.reload();
     };
 
     const linkEl = document.getElementById('room-link');
-    const shareBtn = document.getElementById('share-btn');
-    linkEl.value = window.location.href;
+    if (linkEl) linkEl.value = window.location.href;
 
-    linkEl.onclick = () => {
-        linkEl.select();
-        document.execCommand('copy');
-        alert('Ссылка скопирована!');
-    };
-
-    shareBtn.onclick = async () => {
-        const shareData = { title: 'Fentanyl Chess', text: 'Присоединяйся!', url: window.location.href };
-        try {
-            if (navigator.share && navigator.canShare(shareData)) {
-                await navigator.share(shareData);
-            } else {
-                linkEl.select();
-                document.execCommand('copy');
-                alert('Ссылка скопирована!');
-            }
-        } catch (err) {
-            if (err.name !== 'AbortError') alert('Ссылка скопирована!');
+    document.getElementById('share-btn').onclick = () => {
+        if (navigator.share) {
+            navigator.share({ title: 'Шахматы онлайн', url: window.location.href });
+        } else {
+            linkEl.select();
+            document.execCommand('copy');
+            alert('Ссылка скопирована!');
         }
     };
 }
@@ -366,9 +372,9 @@ function updateUI(data) {
     }
 
     const gameSection = document.getElementById('game-section');
-    const isGameActive = gameSection && !gameSection.classList.contains('hidden');
+    const isGameVisible = gameSection && !gameSection.classList.contains('hidden');
 
-    if (data.gameState === 'game_over' && isGameActive) {
+    if (data.gameState === 'game_over' && isGameVisible) {
         document.getElementById('game-modal').classList.remove('hidden');
         document.getElementById('modal-desc').innerText = data.message || getGameResultMessage();
     } else {
