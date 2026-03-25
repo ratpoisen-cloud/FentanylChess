@@ -1011,3 +1011,62 @@ body {
 #turn-indicator {
     display: none;
 }
+/* ===== БУКВЕННЫЙ АВАТАР ДЛЯ ПОЛЬЗОВАТЕЛЕЙ БЕЗ ФОТО ===== */
+
+.letter-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #8a9a7a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #000;
+    border: 2px solid var(--accent);
+    transition: all 0.2s ease;
+}
+
+/* Для темной темы */
+.letter-avatar {
+    background: linear-gradient(135deg, #6b8c5c, #4a6a3a);
+    color: white;
+}
+
+/* Обертка для аватара */
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    padding: 6px 16px 6px 10px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+}
+
+#user-photo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    object-fit: cover;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 600px) {
+    .letter-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    #user-photo {
+        width: 32px;
+        height: 32px;
+    }
+    
+    #user-info {
+        padding: 4px 12px 4px 8px;
+    }
+}
