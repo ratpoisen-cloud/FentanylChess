@@ -267,15 +267,32 @@ function handleMobileClick(square) {
         }
         
         // Пытаемся сделать ход
-        const move = game.move({ from: selectedSquare, to: square, promotion: 'q', verbose: true });
-        
-        if (move) {
-            // Ход валидный - сохраняем для подтверждения
-            pendingMove = move;
-            board.position(game.fen(), true);
-            document.getElementById('confirm-move-box').classList.remove('hidden');
-            clearSelection();
-        } else {
+const move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+
+if (move) {
+    // откатываем (как на десктопе)
+    game.undo();
+
+    // сохраняем координаты
+    pendingMove = {
+        from: selectedSquare,
+        to: square
+    };
+
+    // показываем preview (как на десктопе)
+    game.move({
+        from: selectedSquare,
+        to: square,
+        promotion: 'q'
+    });
+
+    board.position(game.fen(), false);
+
+    game.undo();
+
+    document.getElementById('confirm-move-box')?.classList.remove('hidden');
+    clearSelection();
+} else {
             // Ход невалидный - проверяем, может кликнули на другую свою фигуру
             if (piece && piece.color === playerColor) {
                 // Выбираем новую фигуру
@@ -390,13 +407,16 @@ function setupGameControls(gameRef, roomId) {
     clearSelection();
 };
     
-    // Отмена неподтвержденного хода
-    document.getElementById('cancel-move-btn').onclick = () => {
+ // Отмена неподтвержденного хода
+document.getElementById('cancel-move-btn').onclick = () => {
     if (pendingMove) {
         pendingMove = null;
 
-        // ✅ ВАЖНО: возвращаем доску в реальное состояние
+        // возвращаем доску в реальное состояние
         board.position(game.fen(), false);
+
+        // 🔥 ВАЖНО ДЛЯ МОБИЛКИ
+        selectedSquare = null;
 
         document.getElementById('confirm-move-box')?.classList.add('hidden');
         clearSelection();
