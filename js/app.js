@@ -575,7 +575,7 @@ function updateUI(data) {
     if (game.game_over()) {
         updateGameStatusText(data.message || getGameResultMessage());
     } else if (game.in_check()) {
-        updateGameStatusText(`⚠️ ШАХ! ${game.turn() === 'w' ? 'Белым' : 'Черным'}`);
+        updateGameStatusText(`ШАХ! ${game.turn() === 'w' ? 'Белым' : 'Черным'}`);
     } else {
         updateGameStatusText('♟️ Игра активна');
     }
