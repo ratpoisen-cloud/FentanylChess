@@ -13,7 +13,12 @@ let pendingTakeback = null;
 
 const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
                  ('ontouchstart' in window && window.innerWidth < 768);
-
+// ===== FIX: resize chessboard =====
+window.addEventListener('resize', () => {
+    if (board) {
+        requestAnimationFrame(() => board.resize());
+    }
+});
 // --- ИНИЦИАЛИЗАЦИЯ ---
 window.addEventListener('DOMContentLoaded', () => {
     setupAuth();
