@@ -341,6 +341,17 @@ function handleDrop(source, target) {
         from: source,
         to: target
     };
+    // временно показываем позицию с ходом
+game.move({
+    from: source,
+    to: target,
+    promotion: 'q'
+});
+
+board.position(game.fen(), false);
+
+// возвращаем обратно в логику
+game.undo();
 
     // ❌ УДАЛЕНО: board.position (это критично)
 
