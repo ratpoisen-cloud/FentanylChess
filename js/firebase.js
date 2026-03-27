@@ -1,6 +1,9 @@
 // ==================== FIREBASE ОПЕРАЦИИ ====================
 // Отвечает за: все взаимодействия с Firebase (чтение, запись, транзакции)
 
+// Импортируем Firebase функции из глобального объекта window
+// Они доступны после загрузки firebase-config.js (type="module")
+
 // Ссылки на Firebase
 window.getGameRef = function(roomId) {
     return ref(window.db, `games/${roomId}`);
@@ -51,4 +54,18 @@ window.watchGames = function(callback) {
 // Слежение за конкретной игрой
 window.watchGame = function(gameRef, callback) {
     return onValue(gameRef, callback);
+};
+
+// Дожидаемся загрузки Firebase функций
+window.waitForFirebase = function() {
+    return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+            if (typeof ref !== 'undefined' && typeof set !== 'undefined' && 
+                typeof onValue !== 'undefined' && typeof runTransaction !== 'undefined' &&
+                typeof update !== 'undefined' && typeof get !== 'undefined') {
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100);
+    });
 };
