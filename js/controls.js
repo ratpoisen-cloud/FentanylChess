@@ -1,11 +1,17 @@
 // ==================== КНОПКИ УПРАВЛЕНИЯ ====================
+// Отвечает за: подтверждение хода, сдачу, выход, реванш, отмену хода
 
 window.setupGameControls = function(gameRef, roomId) {
     // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
         if (!window.pendingMove) return;
         
-        // Ход уже сделан, просто отправляем в Firebase
+        window.game.move({
+            from: window.pendingMove.from,
+            to: window.pendingMove.to,
+            promotion: 'q'
+        });
+        
         const updateData = { 
             pgn: window.game.pgn(), 
             fen: window.game.fen(), 
@@ -25,17 +31,12 @@ window.setupGameControls = function(gameRef, roomId) {
         window.clearSelection();
     };
     
-    // Отмена неподтвержденного хода - ВОЗВРАЩАЕМ ФИГУРУ НА МЕСТО
+    // Отмена неподтвержденного хода
     document.getElementById('cancel-move-btn').onclick = () => {
         if (window.pendingMove) {
-            // Отменяем ход в игре
-            window.game.undo();
-            
-            // Обновляем доску с анимацией
-            window.updateBoardPosition(window.game.fen(), true);
-            
             window.pendingMove = null;
             document.getElementById('confirm-move-box')?.classList.add('hidden');
+            window.updateBoardPosition(window.game.fen(), false);
             window.clearSelection();
         }
     };
@@ -123,7 +124,6 @@ window.setupGameControls = function(gameRef, roomId) {
             document.getElementById('takeback-request-box').classList.add('hidden');
             window.pendingTakeback = null;
             window.clearSelection();
-            window.updateBoardPosition(window.game.fen(), true);
         }
     };
     
