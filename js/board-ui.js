@@ -1,15 +1,16 @@
 // ==================== УПРАВЛЕНИЕ ДОСКОЙ ====================
+// Отвечает за: инициализацию доски, подсветку клеток, drag-and-drop для десктопа, клики для мобилы
 
 // Инициализация доски
 window.initBoard = function(playerColor) {
     const boardConfig = {
-        draggable: !window.isMobile,
+        draggable: !window.isMobile,  // Включаем drag-and-drop только на десктопе
         onDragStart: window.handleDragStart,
         onDrop: window.handleDrop,
         onMouseoutSquare: window.handleMouseoutSquare,
         onMouseoverSquare: window.handleMouseoverSquare,
         position: 'start',
-        moveSpeed: 200,
+        moveSpeed: 'slow',
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png'
     };
     
@@ -17,7 +18,7 @@ window.initBoard = function(playerColor) {
     
     if (playerColor === 'b') window.board.orientation('black');
     
-    // Для мобильных устройств используем клики
+    // Для мобильных устройств используем клики (без drag-and-drop)
     if (window.isMobile && playerColor) {
         window.attachMobileClickHandler();
     }
@@ -29,6 +30,11 @@ window.initBoard = function(playerColor) {
 
 // Проверка перед началом перетаскивания
 window.handleDragStart = function(source, piece, position, orientation) {
+    // Не разрешаем перетаскивание, если:
+    // - игра окончена
+    // - нет цвета игрока
+    // - не наш ход
+    // - есть ожидающий подтверждения ход
     if (window.game.game_over() || 
         !window.playerColor || 
         window.game.turn() !== window.playerColor || 
@@ -36,12 +42,14 @@ window.handleDragStart = function(source, piece, position, orientation) {
         return false;
     }
     
+    // Проверяем, что перетаскиваем свою фигуру
     const pieceColor = piece.charAt(0);
     if ((window.playerColor === 'w' && pieceColor === 'b') ||
         (window.playerColor === 'b' && pieceColor === 'w')) {
         return false;
     }
     
+    // Сохраняем источник для подсветки
     window.dragSourceSquare = source;
     window.showPossibleMoves(source);
     
@@ -53,8 +61,10 @@ window.handleMouseoverSquare = function(square, piece) {
     if (window.isMobile) return;
     if (!window.playerColor || window.game.game_over() || window.pendingMove) return;
     
+    // Если перетаскиваем фигуру - показываем ходы (уже показаны в onDragStart)
     if (window.dragSourceSquare) return;
     
+    // Если наводим на свою фигуру и это наш ход - показываем её возможные ходы
     if (piece && piece.charAt(0) === window.playerColor && window.game.turn() === window.playerColor) {
         window.showPossibleMoves(square);
     }
@@ -63,6 +73,7 @@ window.handleMouseoverSquare = function(square, piece) {
 // Убираем подсветку при уходе мыши
 window.handleMouseoutSquare = function(square, piece) {
     if (window.isMobile) return;
+    // Если не перетаскиваем фигуру - убираем подсветку
     if (!window.dragSourceSquare) {
         window.removeTemporaryHighlights();
     }
@@ -71,9 +82,13 @@ window.handleMouseoutSquare = function(square, piece) {
 // Показ возможных ходов для фигуры
 window.showPossibleMoves = function(square) {
     window.removeTemporaryHighlights();
+    
+    // Подсвечиваем текущую клетку
     window.highlightSquare(square, 'highlight-drag-source');
     
+    // Получаем все возможные ходы для выбранной фигуры
     const moves = window.game.moves({ square: square, verbose: true });
+    
     moves.forEach(move => {
         if (move.captured) {
             window.highlightSquare(move.to, 'highlight-capture');
@@ -88,12 +103,14 @@ window.removeTemporaryHighlights = function() {
     $('#myBoard .square-55d63').removeClass('highlight-drag-source highlight-possible highlight-capture');
 };
 
-// Обработка сброса фигуры (drag-and-drop) - фигура ОСТАЕТСЯ на новом месте
+// Обработка сброса фигуры (drag-and-drop)
 window.handleDrop = function(source, target) {
     if (window.isMobile) return 'snapback';
     
+    // Убираем подсветку
     window.removeTemporaryHighlights();
     
+    // Проверки
     if (window.game.game_over() || !window.playerColor || window.game.turn() !== window.playerColor || window.pendingMove) {
         window.dragSourceSquare = null;
         return 'snapback';
@@ -107,19 +124,25 @@ window.handleDrop = function(source, target) {
         return 'snapback';
     }
     
-    // Ход валидный - фигура уже на новом месте
+    // Ход валидный - сохраняем для подтверждения
     window.pendingMove = { from: source, to: target };
+    
+    // Откатываем ход
+    window.game.undo();
+    
+    // Показываем предварительный ход
+    window.game.move({ from: source, to: target, promotion: 'q' });
+    window.updateBoardPosition(window.game.fen(), false);
+    window.game.undo();
     
     // Показываем оверлей подтверждения
     document.getElementById('confirm-move-box')?.classList.remove('hidden');
     
     window.dragSourceSquare = null;
-    
-    // Возвращаем 'snapback' чтобы фигура не дублировалась, но она уже на месте
     return 'snapback';
 };
 
-// ==================== МОБИЛЬНАЯ ЛОГИКА (клики) ====================
+// ==================== МОБИЛЬНАЯ ЛОГИКА (клики) - ВОЗВРАЩАЕМ КАК БЫЛО ====================
 
 // Прикрепление обработчика кликов для мобильных устройств
 window.attachMobileClickHandler = function() {
@@ -133,8 +156,9 @@ window.attachMobileClickHandler = function() {
     });
 };
 
-// Мобильный клик
+// Мобильный клик (оригинальная логика)
 window.handleMobileClick = function(square) {
+    // Проверки
     if (window.game.game_over()) return;
     if (!window.playerColor) return;
     if (window.game.turn() !== window.playerColor) return;
@@ -142,30 +166,41 @@ window.handleMobileClick = function(square) {
     
     const piece = window.game.get(square);
     
+    // Случай 1: Уже есть выбранная фигура
     if (window.selectedSquare) {
+        // Если кликнули на ту же фигуру - снимаем выделение
         if (window.selectedSquare === square) {
             window.clearSelection();
             return;
         }
         
+        // Пытаемся сделать ход
         const move = window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
         
         if (move) {
-            // Фигура переместилась на новое место
+            // Ход валидный - сохраняем для подтверждения
             window.pendingMove = { from: window.selectedSquare, to: square };
+            window.updateBoardPosition(window.game.fen(), true);
             document.getElementById('confirm-move-box').classList.remove('hidden');
             window.clearSelection();
         } else {
+            // Ход невалидный - проверяем, может кликнули на другую свою фигуру
             if (piece && piece.color === window.playerColor) {
+                // Выбираем новую фигуру
                 window.selectSquare(square);
             } else {
+                // Кликнули на пустую клетку или фигуру соперника - сбрасываем выделение
                 window.clearSelection();
             }
         }
-    } else {
+    } 
+    // Случай 2: Нет выбранной фигуры
+    else {
+        // Если кликнули на свою фигуру - выделяем её
         if (piece && piece.color === window.playerColor) {
             window.selectSquare(square);
         }
+        // Если кликнули на чужую фигуру или пустую клетку - ничего не делаем
     }
 };
 
@@ -175,9 +210,13 @@ window.handleMobileClick = function(square) {
 window.selectSquare = function(square) {
     window.clearSelection();
     window.selectedSquare = square;
+    
+    // Подсветка выбранной клетки
     window.highlightSquare(square, 'highlight-selected');
     
+    // Получаем все возможные ходы для выбранной фигуры
     const moves = window.game.moves({ square: square, verbose: true });
+    
     moves.forEach(move => {
         if (move.captured) {
             window.highlightSquare(move.to, 'highlight-capture');
