@@ -81,12 +81,6 @@ window.initGame = async function(roomId) {
     
     if (window.playerColor === 'b') window.board.orientation('black');
     
-    setTimeout(() => {
-        if (window.isMobile && window.playerColor) {
-            window.attachMobileClickHandler();
-        }
-    }, 100);
-    
     // Синхронизация игры
     window.watchGame(gameRef, (snap) => {
         const data = snap.val();
@@ -105,63 +99,5 @@ window.initGame = async function(roomId) {
     window.currentRoomId = roomId;
 };
 
-// Мобильный клик
-window.handleMobileClick = function(square) {
-    if (window.game.game_over()) return;
-    if (!window.playerColor) return;
-    if (window.game.turn() !== window.playerColor) return;
-    if (window.pendingMove) return;
-    
-    const piece = window.game.get(square);
-    
-    if (window.selectedSquare) {
-        if (window.selectedSquare === square) {
-            window.clearSelection();
-            return;
-        }
-        
-        const move = window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
-        
-        if (move) {
-            window.game.undo();
-            window.pendingMove = { from: window.selectedSquare, to: square };
-            window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
-            window.updateBoardPosition(window.game.fen(), false);
-            window.game.undo();
-            document.getElementById('confirm-move-box')?.classList.remove('hidden');
-            window.clearSelection();
-        } else {
-            if (piece && piece.color === window.playerColor) {
-                window.selectSquare(square);
-            } else {
-                window.clearSelection();
-            }
-        }
-    } else {
-        if (piece && piece.color === window.playerColor) {
-            window.selectSquare(square);
-        }
-    }
-};
-
-// Десктопный drag-and-drop
-window.handleDrop = function(source, target) {
-    if (window.game.game_over() || !window.playerColor || window.game.turn() !== window.playerColor || window.pendingMove) {
-        return 'snapback';
-    }
-    
-    const testMove = window.game.move({ from: source, to: target, promotion: 'q' });
-    if (testMove === null) return 'snapback';
-    
-    window.game.undo();
-    
-    window.pendingMove = { from: source, to: target };
-    
-    window.game.move({ from: source, to: target, promotion: 'q' });
-    window.updateBoardPosition(window.game.fen(), false);
-    window.game.undo();
-    
-    document.getElementById('confirm-move-box')?.classList.remove('hidden');
-    
-    return 'snapback';
-};
+// Десктопный drag-and-drop больше не нужен, удаляем
+// window.handleDrop больше не используется
