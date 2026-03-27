@@ -1,10 +1,10 @@
 // ==================== УПРАВЛЕНИЕ ДОСКОЙ ====================
-// Отвечает за: инициализацию доски, подсветку клеток, drag-and-drop
+// Отвечает за: инициализацию доски, подсветку клеток, drag-and-drop для десктопа, клики для мобилы
 
 // Инициализация доски
 window.initBoard = function(playerColor) {
     const boardConfig = {
-        draggable: true,
+        draggable: !window.isMobile,  // Включаем drag-and-drop только на десктопе
         onDragStart: window.handleDragStart,
         onDrop: window.handleDrop,
         onMouseoutSquare: window.handleMouseoutSquare,
@@ -18,13 +18,15 @@ window.initBoard = function(playerColor) {
     
     if (playerColor === 'b') window.board.orientation('black');
     
-    // Для мобильных устройств используем клики
-    if (window.isMobile) {
+    // Для мобильных устройств используем клики (без drag-and-drop)
+    if (window.isMobile && playerColor) {
         window.attachMobileClickHandler();
     }
     
     return window.board;
 };
+
+// ==================== ДЕСКТОПНАЯ ЛОГИКА (drag-and-drop) ====================
 
 // Проверка перед началом перетаскивания
 window.handleDragStart = function(source, piece, position, orientation) {
@@ -56,6 +58,7 @@ window.handleDragStart = function(source, piece, position, orientation) {
 
 // Подсветка при наведении на клетку
 window.handleMouseoverSquare = function(square, piece) {
+    if (window.isMobile) return;
     if (!window.playerColor || window.game.game_over() || window.pendingMove) return;
     
     // Если перетаскиваем фигуру - показываем ходы (уже показаны в onDragStart)
@@ -69,8 +72,9 @@ window.handleMouseoverSquare = function(square, piece) {
 
 // Убираем подсветку при уходе мыши
 window.handleMouseoutSquare = function(square, piece) {
-    // Если не перетаскиваем фигуру и нет выбранной фигуры - убираем подсветку
-    if (!window.dragSourceSquare && !window.selectedSquare) {
+    if (window.isMobile) return;
+    // Если не перетаскиваем фигуру - убираем подсветку
+    if (!window.dragSourceSquare) {
         window.removeTemporaryHighlights();
     }
 };
@@ -92,8 +96,6 @@ window.showPossibleMoves = function(square) {
             window.highlightSquare(move.to, 'highlight-possible');
         }
     });
-    
-    window.currentHighlightSquare = square;
 };
 
 // Убираем временную подсветку
@@ -103,6 +105,8 @@ window.removeTemporaryHighlights = function() {
 
 // Обработка сброса фигуры (drag-and-drop)
 window.handleDrop = function(source, target) {
+    if (window.isMobile) return 'snapback';
+    
     // Убираем подсветку
     window.removeTemporaryHighlights();
     
@@ -138,44 +142,7 @@ window.handleDrop = function(source, target) {
     return 'snapback';
 };
 
-// Мобильный клик
-window.handleMobileClick = function(square) {
-    if (window.game.game_over()) return;
-    if (!window.playerColor) return;
-    if (window.game.turn() !== window.playerColor) return;
-    if (window.pendingMove) return;
-    
-    const piece = window.game.get(square);
-    
-    if (window.selectedSquare) {
-        if (window.selectedSquare === square) {
-            window.clearSelection();
-            return;
-        }
-        
-        const move = window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
-        
-        if (move) {
-            window.game.undo();
-            window.pendingMove = { from: window.selectedSquare, to: square };
-            window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
-            window.updateBoardPosition(window.game.fen(), false);
-            window.game.undo();
-            document.getElementById('confirm-move-box')?.classList.remove('hidden');
-            window.clearSelection();
-        } else {
-            if (piece && piece.color === window.playerColor) {
-                window.selectSquare(square);
-            } else {
-                window.clearSelection();
-            }
-        }
-    } else {
-        if (piece && piece.color === window.playerColor) {
-            window.selectSquare(square);
-        }
-    }
-};
+// ==================== МОБИЛЬНАЯ ЛОГИКА (клики) - ВОЗВРАЩАЕМ КАК БЫЛО ====================
 
 // Прикрепление обработчика кликов для мобильных устройств
 window.attachMobileClickHandler = function() {
@@ -189,13 +156,67 @@ window.attachMobileClickHandler = function() {
     });
 };
 
-// Выделение фигуры (для мобильной версии)
+// Мобильный клик (оригинальная логика)
+window.handleMobileClick = function(square) {
+    // Проверки
+    if (window.game.game_over()) return;
+    if (!window.playerColor) return;
+    if (window.game.turn() !== window.playerColor) return;
+    if (window.pendingMove) return;
+    
+    const piece = window.game.get(square);
+    
+    // Случай 1: Уже есть выбранная фигура
+    if (window.selectedSquare) {
+        // Если кликнули на ту же фигуру - снимаем выделение
+        if (window.selectedSquare === square) {
+            window.clearSelection();
+            return;
+        }
+        
+        // Пытаемся сделать ход
+        const move = window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
+        
+        if (move) {
+            // Ход валидный - сохраняем для подтверждения
+            window.pendingMove = { from: window.selectedSquare, to: square };
+            window.updateBoardPosition(window.game.fen(), true);
+            document.getElementById('confirm-move-box').classList.remove('hidden');
+            window.clearSelection();
+        } else {
+            // Ход невалидный - проверяем, может кликнули на другую свою фигуру
+            if (piece && piece.color === window.playerColor) {
+                // Выбираем новую фигуру
+                window.selectSquare(square);
+            } else {
+                // Кликнули на пустую клетку или фигуру соперника - сбрасываем выделение
+                window.clearSelection();
+            }
+        }
+    } 
+    // Случай 2: Нет выбранной фигуры
+    else {
+        // Если кликнули на свою фигуру - выделяем её
+        if (piece && piece.color === window.playerColor) {
+            window.selectSquare(square);
+        }
+        // Если кликнули на чужую фигуру или пустую клетку - ничего не делаем
+    }
+};
+
+// ==================== ОБЩИЕ ФУНКЦИИ ====================
+
+// Выделение фигуры и подсветка доступных ходов (для мобильной версии)
 window.selectSquare = function(square) {
     window.clearSelection();
     window.selectedSquare = square;
+    
+    // Подсветка выбранной клетки
     window.highlightSquare(square, 'highlight-selected');
     
+    // Получаем все возможные ходы для выбранной фигуры
     const moves = window.game.moves({ square: square, verbose: true });
+    
     moves.forEach(move => {
         if (move.captured) {
             window.highlightSquare(move.to, 'highlight-capture');
@@ -205,7 +226,7 @@ window.selectSquare = function(square) {
     });
 };
 
-// Сброс выделения
+// Сброс выделения и подсветки
 window.clearSelection = function() {
     window.selectedSquare = null;
     window.removeHighlights();
