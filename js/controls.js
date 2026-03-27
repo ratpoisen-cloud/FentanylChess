@@ -5,13 +5,7 @@ window.setupGameControls = function(gameRef, roomId) {
     document.getElementById('confirm-btn').onclick = () => {
         if (!window.pendingMove) return;
         
-        // Применяем ход
-        window.game.move({
-            from: window.pendingMove.from,
-            to: window.pendingMove.to,
-            promotion: 'q'
-        });
-        
+        // Ход уже сделан, просто отправляем в Firebase
         const updateData = { 
             pgn: window.game.pgn(), 
             fen: window.game.fen(), 
@@ -31,21 +25,17 @@ window.setupGameControls = function(gameRef, roomId) {
         window.clearSelection();
     };
     
-    // Отмена неподтвержденного хода - ПЛАВНЫЙ ВОЗВРАТ ФИГУРЫ
+    // Отмена неподтвержденного хода - ВОЗВРАЩАЕМ ФИГУРУ НА МЕСТО
     document.getElementById('cancel-move-btn').onclick = () => {
         if (window.pendingMove) {
+            // Отменяем ход в игре
+            window.game.undo();
+            
+            // Обновляем доску с анимацией
+            window.updateBoardPosition(window.game.fen(), true);
+            
             window.pendingMove = null;
             document.getElementById('confirm-move-box')?.classList.add('hidden');
-            
-            // Плавно возвращаем доску в исходное состояние
-            if (window.isMobile) {
-                // На мобиле просто обновляем позицию
-                window.updateBoardPosition(window.game.fen(), true);
-            } else {
-                // На десктопе возвращаем с анимацией
-                window.board.position(window.game.fen(), true);
-            }
-            
             window.clearSelection();
         }
     };
