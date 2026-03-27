@@ -55,7 +55,7 @@ window.initGame = async function(roomId) {
     document.getElementById('room-link').value = window.location.href;
     
     const user = await new Promise(res => { 
-        const unsub = onAuthStateChanged(auth, u => { unsub(); res(u); }); 
+        const unsub = onAuthStateChanged(window.auth, u => { unsub(); res(u); }); 
     });
     
     const uid = window.getUserId(user);
