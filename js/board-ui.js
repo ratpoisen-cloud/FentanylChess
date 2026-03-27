@@ -1,5 +1,4 @@
 // ==================== УПРАВЛЕНИЕ ДОСКОЙ ====================
-// Отвечает за: инициализацию доски, подсветку клеток, drag-and-drop для десктопа, клики для мобилы
 
 // Инициализация доски
 window.initBoard = function(playerColor) {
@@ -10,7 +9,7 @@ window.initBoard = function(playerColor) {
         onMouseoutSquare: window.handleMouseoutSquare,
         onMouseoverSquare: window.handleMouseoverSquare,
         position: 'start',
-        moveSpeed: 200,  // Быстрая анимация
+        moveSpeed: 200,
         pieceTheme: 'https://chessboardjs.com/img/chesspieces/alpha/{piece}.png'
     };
     
@@ -89,7 +88,7 @@ window.removeTemporaryHighlights = function() {
     $('#myBoard .square-55d63').removeClass('highlight-drag-source highlight-possible highlight-capture');
 };
 
-// Обработка сброса фигуры (drag-and-drop)
+// Обработка сброса фигуры (drag-and-drop) - фигура ОСТАЕТСЯ на новом месте
 window.handleDrop = function(source, target) {
     if (window.isMobile) return 'snapback';
     
@@ -100,6 +99,7 @@ window.handleDrop = function(source, target) {
         return 'snapback';
     }
     
+    // Пробуем сделать ход
     const move = window.game.move({ from: source, to: target, promotion: 'q' });
     
     if (move === null) {
@@ -107,18 +107,15 @@ window.handleDrop = function(source, target) {
         return 'snapback';
     }
     
-    // Сохраняем ход
+    // Ход валидный - фигура уже на новом месте
     window.pendingMove = { from: source, to: target };
-    
-    // Показываем ход на доске
-    window.game.move({ from: source, to: target, promotion: 'q' });
-    window.updateBoardPosition(window.game.fen(), true);
-    window.game.undo();
     
     // Показываем оверлей подтверждения
     document.getElementById('confirm-move-box')?.classList.remove('hidden');
     
     window.dragSourceSquare = null;
+    
+    // Возвращаем 'snapback' чтобы фигура не дублировалась, но она уже на месте
     return 'snapback';
 };
 
@@ -154,11 +151,8 @@ window.handleMobileClick = function(square) {
         const move = window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
         
         if (move) {
+            // Фигура переместилась на новое место
             window.pendingMove = { from: window.selectedSquare, to: square };
-            // Показываем ход на доске
-            window.game.move({ from: window.selectedSquare, to: square, promotion: 'q' });
-            window.updateBoardPosition(window.game.fen(), true);
-            window.game.undo();
             document.getElementById('confirm-move-box').classList.remove('hidden');
             window.clearSelection();
         } else {
