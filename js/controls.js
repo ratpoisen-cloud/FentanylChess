@@ -1,9 +1,6 @@
 // ==================== КНОПКИ УПРАВЛЕНИЯ ====================
 // Отвечает за: подтверждение хода, сдачу, выход, реванш, отмену хода
 
-// Импорт Firebase функций (будут доступны из глобальной области после загрузки)
-// Функции ref, set, onValue, get доступны из firebase-config.js
-
 window.setupGameControls = function(gameRef, roomId) {
     // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
