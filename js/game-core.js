@@ -141,9 +141,16 @@ window.initGame = async function(roomId) {
         const data = snap.val();
         if (!data) return;
         if (data.pgn && data.pgn !== window.game.pgn()) { 
-            window.game.load_pgn(data.pgn); 
-            window.updateBoardPosition(window.game.fen(), true);
-            window.pendingMove = null;
+           window.game.load_pgn(data.pgn); 
+window.updateBoardPosition(window.game.fen(), true);
+
+// 🔥 ВОТ СЮДА ВСТАВЛЯЕМ
+const history = window.game.history({ verbose: true });
+if (history.length > 0) {
+    highlightLastMove(history[history.length - 1]);
+}
+
+window.pendingMove = null;
             window.dragSourceSquare = null;
             document.getElementById('confirm-move-box').classList.add('hidden');
             window.removeHighlights();

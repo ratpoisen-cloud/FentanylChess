@@ -222,3 +222,16 @@ window.setBoardOrientation = function(color) {
         window.board.orientation(color === 'b' ? 'black' : 'white');
     }
 };
+// Подсветка последнего хода
+function highlightLastMove(move) {
+    removeLastMoveHighlight();
+
+    document.querySelector(`.square-${move.from}`)?.classList.add('last-move');
+    document.querySelector(`.square-${move.to}`)?.classList.add('last-move');
+}
+
+function removeLastMoveHighlight() {
+    document.querySelectorAll('.last-move')
+        .forEach(el => el.classList.remove('last-move'));
+}
+window.highlightLastMove = highlightLastMove;

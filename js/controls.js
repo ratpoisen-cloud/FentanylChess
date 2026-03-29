@@ -10,7 +10,9 @@ window.setupGameControls = function(gameRef, roomId) {
         to: window.pendingMove.to,
         promotion: 'q'
     });
-    
+    if (moveResult) {
+    highlightLastMove(moveResult);
+}
     window.updateBoardPosition(window.game.fen(), true);
     
     const now = Date.now();
