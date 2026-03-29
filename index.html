@@ -63,34 +63,39 @@ if ('serviceWorker' in navigator) {
                 <div id="game-status-text" class="game-status-text">Игра активна</div>
             </div>
             
-            <!-- ===== ДОСКА ===== -->
-            <div id="myBoard" style="width: 100%"></div>
+            <div class="board-wrapper">
 
-            <!-- ===== ОВЕРЛЕЙ ПОДТВЕРЖДЕНИЯ ХОДА ===== -->
-            <div id="confirm-move-box" class="confirm-overlay hidden">
-                <button id="confirm-btn" class="btn-round btn-success">✓</button>
-                <button id="cancel-move-btn" class="btn-round btn-danger">✕</button>
-            </div>
+    <!-- ===== ДОСКА ===== -->
+    <div id="myBoard"></div>
 
-            <!-- ===== ОВЕРЛЕЙ ЗАПРОСА ОТМЕНЫ ХОДА ===== -->
-            <div id="takeback-request-box" class="confirm-overlay hidden" style="background: none; box-shadow: none; backdrop-filter: none; padding: 0;">
-                <div class="request-card">
-                    <p>Соперник просит отменить последний ход</p>
-                    <div class="request-buttons">
-                        <button id="takeback-accept" class="btn-round btn-success">✓</button>
-                        <button id="takeback-reject" class="btn-round btn-danger">✕</button>
-                    </div>
-                </div>
+    <!-- ===== ОВЕРЛЕЙ ПОДТВЕРЖДЕНИЯ ХОДА ===== -->
+    <div id="confirm-move-box" class="confirm-overlay hidden">
+        <button id="confirm-btn" class="btn-round btn-success">✓</button>
+        <button id="cancel-move-btn" class="btn-round btn-danger">✕</button>
+    </div>
+
+    <!-- ===== ОВЕРЛЕЙ ЗАПРОСА ОТМЕНЫ ===== -->
+    <div id="takeback-request-box" class="confirm-overlay hidden" style="background: none; box-shadow: none; backdrop-filter: none; padding: 0;">
+        <div class="request-card">
+            <p>Соперник просит отменить последний ход</p>
+            <div class="request-buttons">
+                <button id="takeback-accept" class="btn-round btn-success">✓</button>
+                <button id="takeback-reject" class="btn-round btn-danger">✕</button>
             </div>
-<!-- ===== ОВЕРЛЕЙ ЗАПРОСА НИЧЬЕЙ ===== -->
-<div id="draw-request-box" class="confirm-overlay hidden" style="background: none; box-shadow: none; backdrop-filter: none; padding: 0;">
-    <div class="request-card">
-        <p id="draw-request-text">Соперник предлагает ничью</p>
-        <div class="request-buttons">
-            <button id="draw-accept" class="btn-round btn-success">✓</button>
-            <button id="draw-reject" class="btn-round btn-danger">✕</button>
         </div>
     </div>
+
+    <!-- ===== ОВЕРЛЕЙ НИЧЬЕЙ ===== -->
+    <div id="draw-request-box" class="confirm-overlay hidden" style="background: none; box-shadow: none; backdrop-filter: none; padding: 0;">
+        <div class="request-card">
+            <p id="draw-request-text">Соперник предлагает ничью</p>
+            <div class="request-buttons">
+                <button id="draw-accept" class="btn-round btn-success">✓</button>
+                <button id="draw-reject" class="btn-round btn-danger">✕</button>
+            </div>
+        </div>
+    </div>
+
 </div>
             <!-- ===== КНОПКИ УПРАВЛЕНИЯ ===== -->
             <div class="controls">

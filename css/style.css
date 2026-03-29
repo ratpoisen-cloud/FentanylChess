@@ -725,3 +725,35 @@ body {
         padding: 6px 16px;
     }
 }
+/* === ОБЁРТКА ДОСКИ === */
+.board-wrapper {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* ДОСКА */
+#myBoard {
+    width: 100%;
+}
+
+/* КНОПКИ ПОД ДОСКОЙ */
+.controls {
+    width: 100%;
+    max-width: 500px; /* ВАЖНО: совпадает с доской */
+    margin: 10px auto 0;
+
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* КНОПКИ */
+.controls button {
+    flex: 1;
+    max-width: 160px;
+}
+.board-wrapper {
+    max-width: min(90vw, 500px);
+}
