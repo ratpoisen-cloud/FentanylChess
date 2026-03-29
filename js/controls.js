@@ -219,6 +219,39 @@ document.getElementById('draw-reject').onclick = () => {
         
         location.href = location.origin + location.pathname + `?room=${newId}`;
     };
+    // --- Логика копирования PGN из модалки ---
+const modalCopyBtn = document.getElementById('modal-copy-pgn');
+if (modalCopyBtn) {
+    modalCopyBtn.onclick = () => {
+        const pgn = window.game.pgn();
+        if (!pgn) return alert("Нет данных партии");
+
+        navigator.clipboard.writeText(pgn).then(() => {
+            const originalText = modalCopyBtn.innerText;
+            modalCopyBtn.innerText = '✅ Ок!';
+            setTimeout(() => modalCopyBtn.innerText = originalText, 2000);
+        });
+    };
+}
+
+// --- Логика скачивания PGN из модалки ---
+const modalDownloadBtn = document.getElementById('modal-download-pgn');
+if (modalDownloadBtn) {
+    modalDownloadBtn.onclick = () => {
+        const pgn = window.game.pgn();
+        if (!pgn) return;
+
+        const blob = new Blob([pgn], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `game_${roomId || 'chess'}.pgn`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    };
+}
     
     // Выход из модального окна
     document.getElementById('modal-exit-btn').onclick = () => {

@@ -11,6 +11,7 @@ window.updateUI = function(data) {
     window.updateGameStatus(data);
     window.updateMoveHistory();
     window.updateGameModal(data);
+    window.highlightCheck();
 };
 
 // Обновление индикатора хода
@@ -106,6 +107,12 @@ window.updateGameModal = function(data) {
         document.getElementById('confirm-move-box').classList.add('hidden');
         window.pendingMove = null;
         window.clearSelection();
+        if (data.players) {
+        window.game.header('White', data.players.whiteName || 'Unknown');
+        window.game.header('Black', data.players.blackName || 'Unknown');
+    }
+    window.game.header('Result', window.game.in_draw() ? '1/2-1/2' : (window.game.turn() === 'w' ? '0-1' : '1-0'));
+        
     }
 };
 
@@ -125,5 +132,37 @@ window.updatePlayerBadge = function() {
             window.playerColor === 'w' ? 'white-piece' : 
             window.playerColor === 'b' ? 'black-piece' : ''
         }`;
+    }
+};
+// Находит клетку с королем нужного цвета
+window.getKingSquare = function(color) {
+    const board = window.game.board();
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = board[i][j];
+            if (piece && piece.type === 'k' && piece.color === color) {
+                return String.fromCharCode(97 + j) + (8 - i);
+            }
+        }
+    }
+    return null;
+};
+
+// Сама логика подсветки и вибрации
+window.highlightCheck = function() {
+    // Очищаем старую подсветку шаха
+    $('#myBoard .square-55d63').removeClass('check-pulse');
+    
+    if (window.game && window.game.in_check()) {
+        const kingSquare = window.getKingSquare(window.game.turn());
+        if (kingSquare) {
+            $(`.square-${kingSquare}`).addClass('check-pulse');
+            
+            // Вибрация: если сейчас ход игрока, а не соперника
+            const isMyTurn = window.playerColor === window.game.turn();
+            if (isMyTurn && navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]); 
+            }
+        }
     }
 };
