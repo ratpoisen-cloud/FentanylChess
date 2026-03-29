@@ -31,12 +31,23 @@ window.loadLobby = function(user) {
             return; 
         }
         
-        const sortedGames = Object.entries(games).sort((a, b) => {
-            const aOver = a[1].gameState === 'game_over';
-            const bOver = b[1].gameState === 'game_over';
-            if (aOver === bOver) return 0;
-            return aOver ? 1 : -1;
-        });
+       // Сортировка: сначала активные по последнему ходу (сначала свежие), потом завершённые по последнему ходу
+const sortedGames = Object.entries(games).sort((a, b) => {
+    const aData = a[1];
+    const bData = b[1];
+    const aOver = aData.gameState === 'game_over';
+    const bOver = bData.gameState === 'game_over';
+    
+    // Если обе активные или обе завершённые - сортируем по времени последнего хода (сначала свежие)
+    if (aOver === bOver) {
+        const aTime = aData.lastMoveTime || aData.createdAt || 0;
+        const bTime = bData.lastMoveTime || bData.createdAt || 0;
+        return bTime - aTime;  // По убыванию (сначала новые)
+    }
+    
+    // Активные игры выше завершённых
+    return aOver ? 1 : -1;
+});
         
         let hasGames = false;
         
@@ -48,22 +59,27 @@ window.loadLobby = function(user) {
                 const myColor = p.white === user.uid ? 'white' : 'black';
                 const opponent = (myColor === 'white') ? (p.blackName || "Ожидание...") : (p.whiteName || "Ожидание...");
                 
-                const item = document.createElement('div');
-                item.className = `game-item ${isOver ? 'finished' : 'active'}`;
-                item.innerHTML = `
-                    <div class="game-info">
-                        <div>Против: <b>${opponent}</b></div>
-                        <div class="game-meta">
-                            <span class="game-id">ID: ${id}</span>
-                            <span class="game-status">${isOver ? '✅ Завершена' : '♟️ В процессе'}</span>
-                        </div>
-                        <small>Вы играете ${myColor === 'white' ? 'белыми' : 'черными'}</small>
-                    </div>
-                    <div class="game-actions">
-                        <button class="btn btn-sm play-btn">Играть</button>
-                        <button class="btn btn-sm delete-btn ${isOver ? '' : 'hidden'}" data-game-id="${id}">🗑️ Удалить</button>
-                    </div>
-                `;
+                // Получаем время последнего хода
+const lastMoveTime = data.lastMoveTime || data.createdAt || 0;
+const timeAgo = window.formatTimeAgo(lastMoveTime);
+
+const item = document.createElement('div');
+item.className = `game-item ${isOver ? 'finished' : 'active'}`;
+item.innerHTML = `
+    <div class="game-info">
+        <div>Против: <b>${opponent}</b></div>
+        <div class="game-meta">
+            <span class="game-id">${id}</span>
+            <span class="game-status">${isOver ? 'Завершена' : 'В процессе'}</span>
+            <span class="game-time">${timeAgo}</span>
+        </div>
+        <small>Вы играете ${myColor === 'white' ? 'белыми' : 'черными'}</small>
+    </div>
+    <div class="game-actions">
+        <button class="btn btn-sm play-btn">Играть</button>
+        <button class="btn btn-sm delete-btn ${isOver ? '' : 'hidden'}" data-game-id="${id}">Удалить</button>
+    </div>
+`;
                 
                 const playBtn = item.querySelector('.play-btn');
                 playBtn.onclick = (e) => {

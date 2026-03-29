@@ -3,33 +3,36 @@
 window.setupGameControls = function(gameRef, roomId) {
     // Подтверждение хода
     document.getElementById('confirm-btn').onclick = () => {
-        if (!window.pendingMove) return;
-        
-        // Применяем ход
-        window.game.move({
-            from: window.pendingMove.from,
-            to: window.pendingMove.to,
-            promotion: 'q'
-        });
-        
-        const updateData = { 
-            pgn: window.game.pgn(), 
-            fen: window.game.fen(), 
-            turn: window.game.turn(), 
-            lastMove: Date.now() 
-        };
-        
-        if (window.game.game_over()) { 
-            updateData.gameState = 'game_over'; 
-            updateData.message = window.getGameResultMessage(window.game); 
-        }
-        
-        window.updateGame(gameRef, updateData);
-        
-        window.pendingMove = null;
-        document.getElementById('confirm-move-box')?.classList.add('hidden');
-        window.clearSelection();
+    if (!window.pendingMove) return;
+    
+    const moveResult = window.game.move({
+        from: window.pendingMove.from,
+        to: window.pendingMove.to,
+        promotion: 'q'
+    });
+    
+    window.updateBoardPosition(window.game.fen(), true);
+    
+    const now = Date.now();
+    const updateData = { 
+        pgn: window.game.pgn(), 
+        fen: window.game.fen(), 
+        turn: window.game.turn(), 
+        lastMove: Date.now(),
+        lastMoveTime: now  // Добавляем время последнего хода для сортировки
     };
+    
+    if (window.game.game_over()) { 
+        updateData.gameState = 'game_over'; 
+        updateData.message = window.getGameResultMessage(window.game); 
+    }
+    
+    window.updateGame(gameRef, updateData);
+    
+    window.pendingMove = null;
+    document.getElementById('confirm-move-box')?.classList.add('hidden');
+    window.clearSelection();
+};
     
     // Отмена неподтвержденного хода - ПЛАВНЫЙ ВОЗВРАТ ФИГУРЫ
     document.getElementById('cancel-move-btn').onclick = () => {

@@ -764,3 +764,141 @@ body {
         gap: 5px;
     }
 }
+/* Стиль для отображения времени последнего хода */
+.game-time {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: normal;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 600px) {
+    .game-meta {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+}
+/* ===== СТИЛИ ДЛЯ ЛОББИ ===== */
+.game-item {
+    background: #1a1a1a;
+    padding: 16px 20px;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 4px solid var(--accent);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.game-item:hover {
+    background: #222;
+    transform: translateX(4px);
+}
+
+.game-item.finished {
+    border-left-color: var(--text-secondary);
+    opacity: 0.85;
+}
+
+.game-item.finished:hover {
+    opacity: 1;
+}
+
+.game-info {
+    flex: 1;
+    min-width: 180px;
+}
+
+.game-info div {
+    margin-bottom: 4px;
+}
+
+.game-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: 5px 0;
+    flex-wrap: wrap;
+}
+
+.game-id {
+    font-family: monospace;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.game-status {
+    font-weight: 500;
+}
+
+.game-time {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+
+.game-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.delete-btn {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+    background: #ff6b6b;
+    transform: scale(1.02);
+}
+
+.empty-lobby {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.empty-lobby small {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.play-btn {
+    min-width: 80px;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 600px) {
+    .game-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .game-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+    
+    .game-meta {
+        gap: 8px;
+    }
+    
+    .play-btn, .delete-btn {
+        padding: 6px 16px;
+    }
+}

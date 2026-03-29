@@ -28,3 +28,27 @@ window.getGameResultMessage = function(game) {
     if (game.insufficient_material()) return "Ничья (недостаточно фигур)";
     return "Игра окончена";
 };
+// Форматирование времени для отображения в лобби
+window.formatTimeAgo = function(timestamp) {
+    if (!timestamp) return "неизвестно";
+    
+    const now = Date.now();
+    const diff = now - timestamp;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (seconds < 60) {
+        return "только что";
+    } else if (minutes < 60) {
+        return `${minutes} мин. назад`;
+    } else if (hours < 24) {
+        return `${hours} ч. назад`;
+    } else if (days < 7) {
+        return `${days} дн. назад`;
+    } else {
+        const date = new Date(timestamp);
+        return `${date.getDate()}.${date.getMonth() + 1}`;
+    }
+};

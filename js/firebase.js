@@ -19,14 +19,15 @@ window.getTakebackRef = function(roomId) {
 
 // Создание игры
 window.createGame = async function(roomId, pgn, fen) {
+    const now = Date.now();
     return await set(ref(window.db, `games/${roomId}`), { 
         pgn: pgn, 
         fen: fen,
         gameState: 'active',
-        createdAt: Date.now()
+        createdAt: now,
+        lastMoveTime: now  // Добавляем время последнего хода (при создании = время создания)
     });
 };
-
 // Обновление игры
 window.updateGame = function(gameRef, data) {
     return update(gameRef, data);
