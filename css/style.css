@@ -537,6 +537,11 @@ body {
     margin-top: 20px;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 660px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* ===== БОКОВАЯ ПАНЕЛЬ ===== */
